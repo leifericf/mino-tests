@@ -67,6 +67,42 @@ jobs:
           MINO_GC_STRESS=1 ./mino/mino tests/run_gc_stress.clj
         timeout-minutes: 15
 
+      # ---- GC safeguards (added after the v0.255.6/.7/.8 CI hang ----
+      # at transient-survives-gc-yield surfaced how easily a GC bug
+      # can hide behind full-suite Heisenbug masking. Each safeguard
+      # catches a different shape of bug.
+
+      - name: GC nursery-size fuzz
+        # Runs mino tests/run.clj at 4 nursery sizes (64K/256K/1M/4M).
+        # Catches bugs sensitive to major-phase × test-position
+        # alignment -- varying the nursery shifts where each major
+        # falls in the test sequence.
+        run: ./mino/mino task gc-fuzz
+        timeout-minutes: 15
+
+      - name: GC stress on (gc!)-using subset
+        # Runs the curated shard with MINO_GC_STRESS=1 (every alloc
+        # forces a full major). Sized for stress mode so it finishes
+        # in ~50s rather than tens of minutes.
+        run: ./mino/mino task gc-stress-subset
+        timeout-minutes: 10
+
+      - name: GC verify (allowed-to-fail)
+        # MINO_GC_VERIFY=1 aborts on a barrier-or-remset miss.
+        # Currently a tracking signal: the task wraps the abort and
+        # always exits 0 until mino's pre-existing barrier-miss
+        # sites are also resolved.
+        continue-on-error: true
+        run: ./mino/mino task gc-verify
+        timeout-minutes: 5
+
+      - name: ASan per file
+        # One ASan subprocess per mino test file. Catches Heisenbugs
+        # that hide under full-suite ASan because cumulative heap
+        # state masks the dangerous phase window.
+        run: ./mino/mino task asan-per-file
+        timeout-minutes: 20
+
   coverage:
     name: coverage (macos-14, clang)
     runs-on: macos-14

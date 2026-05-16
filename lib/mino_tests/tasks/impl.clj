@@ -332,3 +332,191 @@
     (doseq [i imgs] (println "   -" i))
     (println "  (full binding lands in Cycle D)")
     0))
+
+;; ---- GC safeguards -----------------------------------------------
+;;
+;; These catch the class of GC bug that hid behind full-suite
+;; Heisenbug masking during the v0.241-v0.252 cycle (see
+;; mino/.local/BUGS.md "CI hang at transient-survives-gc-yield").
+;; Each safeguard targets a different shape of bug:
+;;
+;;   gc-fuzz                  -- vary nursery size; bugs sensitive
+;;                               to GC-phase × test-position alignment
+;;   gc-stress-subset         -- MINO_GC_STRESS=1 on transient_test +
+;;                               gc_test; every alloc forces a major
+;;   gc-verify                -- MINO_GC_VERIFY=1 on the full suite;
+;;                               aborts on barrier/remset miss
+;;   asan-per-file            -- one ASan run per test file rather
+;;                               than one for the whole suite
+
+(defn- run-in-mino
+  "Run a shell command inside the mino submodule directory with
+   optional extra env vars. Returns {:exit N :out S} from sh."
+  [env-pairs cmd]
+  (let [env-pairs (or env-pairs [])
+        env-str   (apply str (interpose " " (map (fn [[k v]] (str k "=" v)) env-pairs)))
+        full-cmd  (if (empty? env-pairs) cmd (str env-str " " cmd))]
+    (sh "sh" "-c" (str "cd mino && " full-cmd))))
+
+(defn gc-fuzz
+  "Run mino's tests/run.clj at four different nursery sizes. Catches
+   bugs whose appearance depends on the GC's major-phase × test-
+   position alignment -- the precise alignment that hides the bug at
+   nursery=4 MiB might surface it at 64 KiB. Adds ~4x suite runtime
+   but stays well under a minute total."
+  []
+  (let [sizes [65536 262144 1048576 4194304]
+        results
+        ;; pipefail so a non-zero exit from mino propagates through
+        ;; the tail -3 truncation (otherwise the tail's exit masks
+        ;; any test-suite abort).
+        (mapv (fn [sz]
+                (println "  gc-fuzz nursery=" sz "bytes")
+                (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]]
+                                     "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -3")]
+                  (println "    " (clojure.string/trim (or (:out r) "")))
+                  {:nursery sz :exit (:exit r) :ok (zero? (:exit r))}))
+              sizes)
+        failed (filterv (fn [r] (not (:ok r))) results)]
+    (if (empty? failed)
+      (do (println "  gc-fuzz: OK across" (count sizes) "nursery sizes") 0)
+      (do (println "  gc-fuzz: failed at" (pr-str failed)) 1))))
+
+(defn gc-stress-subset
+  "Run the gc-bang stress shard with MINO_GC_STRESS=1. Every
+   allocation forces a full STW major collection, so every `conj!`
+   / `(gc!)` exercises the dangerous transient + GC interaction.
+
+   Why a shard not mino's full transient_test.clj / gc_test.clj:
+   stress mode multiplies allocation cost by ~1000x, so the
+   2000-iter loops in those files would run for tens of minutes.
+   tests/gc_bang_stress_shard.clj pins the shapes that matter
+   (transient mutations across `(gc!)`, gc! mid-incremental-major)
+   at iteration counts that finish in ~50 s.
+
+   Honours the standing rule that GC_STRESS over the whole mino
+   suite takes 30+ minutes -- this shard is the curated subset."
+  []
+  (let [shard "tests/gc_bang_stress_shard.clj"
+        bin   (mino-bin)
+        argv  ["env" "MINO_GC_STRESS=1" bin shard]]
+    (println "  exec:" (clojure.string/join " " argv))
+    (try
+      (println (apply sh! argv))
+      (println "  gc-stress-subset: OK")
+      0
+      (catch e
+        (println "  gc-stress-subset failed:" (str e)) 1))))
+
+(defn gc-verify
+  "Run mino's tests/run.clj with MINO_GC_VERIFY=1. The verifier
+   walks every live OLD before each minor and asserts no unreported
+   YOUNG pointers; aborts on a missing write barrier or remset
+   entry. Allowed-to-fail until the existing pre-cycle barrier-miss
+   sites in mino's runtime are also resolved (see mino's
+   .local/BUGS.md). Useful as a regression detector for any new
+   site introduced after the cleanup."
+  []
+  (println "  gc-verify (allowed-to-fail; tracks known barrier-miss bugs)")
+  (let [r (run-in-mino [["MINO_GC_VERIFY" "1"]]
+                       "./mino tests/run.clj 2>&1 | tail -3")]
+    (println "    " (clojure.string/trim (or (:out r) "")))
+    ;; Always return 0 -- this is a tracking signal, not a gate.
+    0))
+
+(defn asan-per-file
+  "Build mino with ASan, then run each test file as its own
+   subprocess. Catches Heisenbugs that hide under full-suite ASan
+   runs because the cumulative heap state masks the dangerous
+   phase window."
+  []
+  (println "  asan-per-file building...")
+  (let [build-r (run-in-mino [] "./mino task build-asan 2>&1 | tail -2")]
+    (when-not (zero? (:exit build-r))
+      (println "    build-asan failed:" (:out build-r))
+      (throw (ex-info "asan-per-file build failed" {:out (:out build-r)}))))
+  ;; mino has no list-dir primitive; explicit file list. Mirrors the
+  ;; require chain in mino's tests/run.clj at v0.255.9 -- new files
+  ;; need to land here too.
+  (let [files ["tests/compat_test.clj"
+               "tests/arithmetic_test.clj"
+               "tests/binding_test.clj"
+               "tests/control_test.clj"
+               "tests/function_test.clj"
+               "tests/collection_test.clj"
+               "tests/string_test.clj"
+               "tests/sequence_test.clj"
+               "tests/lazy_test.clj"
+               "tests/macro_test.clj"
+               "tests/error_test.clj"
+               "tests/atom_test.clj"
+               "tests/stm_test.clj"
+               "tests/predicate_test.clj"
+               "tests/io_test.clj"
+               "tests/reflection_test.clj"
+               "tests/repl_test.clj"
+               "tests/gc_test.clj"
+               "tests/math_test.clj"
+               "tests/hash_compare_test.clj"
+               "tests/regex_test.clj"
+               "tests/tco_test.clj"
+               "tests/core_extra_test.clj"
+               "tests/destructuring_test.clj"
+               "tests/reader_macros_test.clj"
+               "tests/protocol_test.clj"
+               "tests/core_protocols_test.clj"
+               "tests/iteration_test.clj"
+               "tests/metadata_test.clj"
+               "tests/transducer_test.clj"
+               "tests/dialect_test.clj"
+               "tests/empty_list_test.clj"
+               "tests/bc_try_catch_test.clj"
+               "tests/jit_parity_test.clj"
+               "tests/bc_binding_test.clj"
+               "tests/bc_destructure_test.clj"
+               "tests/bc_closure_test.clj"
+               "tests/bc_let_fold_test.clj"
+               "tests/bc_bitwise_test.clj"
+               "tests/ifn_test.clj"
+               "tests/stack_test.clj"
+               "tests/sorted_test.clj"
+               "tests/transient_test.clj"
+               "tests/conformance_test.clj"
+               "tests/var_test.clj"
+               "tests/literal_test.clj"
+               "tests/numeric_tower_test.clj"
+               "tests/records_test.clj"
+               "tests/data_test.clj"
+               "tests/spec_test.clj"
+               "tests/async_smoke_test.clj"
+               "tests/fs_test.clj"
+               "tests/proc_test.clj"
+               "tests/deps_test.clj"]
+        ;; Per-file driver: the test file registers deftests on
+        ;; load, then run-tests-and-exit drives them. Matches the
+        ;; pattern gc-stress-subset uses. `set -o pipefail` forces
+        ;; the shell to propagate ASan's non-zero exit through the
+        ;; tail -3 pipe -- without pipefail the pipe-tail exit
+        ;; would mask any ASan abort.
+        driver-for (fn [f]
+                     (str "(require \\\"tests/test\\\") "
+                          "(load-file \\\"" f "\\\") "
+                          "(run-tests-and-exit)"))
+        results
+        (mapv (fn [f]
+                (let [r (run-in-mino [] (str "set -o pipefail; "
+                                              "./mino_asan -e \""
+                                              (driver-for f)
+                                              "\" 2>&1 | tail -3"))]
+                  {:file f :exit (:exit r) :ok (zero? (:exit r))
+                   :out (or (:out r) "")}))
+              files)
+        failed (filterv (fn [r] (not (:ok r))) results)]
+    (println "  asan-per-file: tested" (count files) "files,"
+             "passed" (- (count files) (count failed)) ","
+             "failed" (count failed))
+    (when (pos? (count failed))
+      (doseq [f failed]
+        (println "    FAIL" (:file f))
+        (println "      " (clojure.string/trim (:out f)))))
+    (if (empty? failed) 0 1)))

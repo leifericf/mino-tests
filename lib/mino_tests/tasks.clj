@@ -68,3 +68,23 @@
   (println "[mino-tests] test-gc-stress (MINO_GC_STRESS=1)")
   (impl/run-clj-file-with-env {"MINO_GC_STRESS" "1"}
                               "tests/run_gc_stress.clj"))
+
+;; ---- GC safeguards (added 2026-05-16 after the CI hang at
+;; transient-survives-gc-yield revealed how easily a GC bug can hide
+;; behind full-suite Heisenbug masking) ----
+
+(defn gc-fuzz [& _]
+  (println "[mino-tests] gc-fuzz (mino tests/run.clj at varied nursery sizes)")
+  (impl/gc-fuzz))
+
+(defn gc-stress-subset [& _]
+  (println "[mino-tests] gc-stress-subset (MINO_GC_STRESS=1 on transient_test + gc_test)")
+  (impl/gc-stress-subset))
+
+(defn gc-verify [& _]
+  (println "[mino-tests] gc-verify (MINO_GC_VERIFY=1 on mino tests/run.clj)")
+  (impl/gc-verify))
+
+(defn asan-per-file [& _]
+  (println "[mino-tests] asan-per-file (mino tests/ files, one ASan subprocess each)")
+  (impl/asan-per-file))

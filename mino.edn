@@ -36,4 +36,12 @@
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}
   test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"
-                     :task mino-tests.tasks/test-gc-stress}}}
+                     :task mino-tests.tasks/test-gc-stress}
+  gc-fuzz           {:doc  "Run mino tests/run.clj at 4 nursery sizes (64K/256K/1M/4M)"
+                     :task mino-tests.tasks/gc-fuzz}
+  gc-stress-subset  {:doc  "MINO_GC_STRESS=1 on mino's transient_test + gc_test only"
+                     :task mino-tests.tasks/gc-stress-subset}
+  gc-verify         {:doc  "MINO_GC_VERIFY=1 on mino tests/run.clj (allowed-to-fail)"
+                     :task mino-tests.tasks/gc-verify}
+  asan-per-file     {:doc  "One ASan subprocess per mino test file -- defeats full-suite Heisenbugs"
+                     :task mino-tests.tasks/asan-per-file}}}

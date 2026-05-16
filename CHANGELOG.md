@@ -1,5 +1,54 @@
 # Changelog
 
+## v0.8.0 — GC Safeguards + Submodule Bump to mino v0.255.9
+
+Four new tasks added after the v0.255.6/.7/.8 CI hang at
+`transient-survives-gc-yield` revealed how easily a GC bug can
+hide behind full-suite Heisenbug masking. Each safeguard targets
+a different bug-detection shape; together they cover the gaps the
+release-gate's existing single ASan-on-full-suite pass left open.
+
+* `gc-fuzz` -- run mino's `tests/run.clj` at four nursery sizes
+  (64 KiB / 256 KiB / 1 MiB / 4 MiB). Catches bugs sensitive to
+  the GC major-phase × test-position alignment: varying the
+  nursery shifts where each major slice lands in the test
+  sequence, so a bug that hides at the default 4 MiB may surface
+  at 64 KiB. ~18 s locally.
+
+* `gc-stress-subset` -- `MINO_GC_STRESS=1` on a curated shard
+  (`tests/gc_bang_stress_shard.clj`) of `(gc!)`-using shapes
+  drawn from mino's `transient_test.clj` and `gc_test.clj`. The
+  shard is sized for stress mode (~5 deftests, ~50 s) rather
+  than the full transient/gc suite, which would run for tens of
+  minutes under stress per the standing
+  `[[no-gc-stress-full-suite]]` rule. Catches `(gc!)` interactions
+  with transients, vector / map / set mutation patterns that
+  every alloc collects through.
+
+* `gc-verify` -- `MINO_GC_VERIFY=1` on `tests/run.clj`. The
+  verifier walks every live OLD before each minor and aborts on
+  any barrier-or-remset miss. Currently allowed-to-fail (the
+  task always exits 0) because mino has pre-existing barrier-miss
+  sites that abort the suite at startup; the task is a tracking
+  signal until those sites are cleaned up.
+
+* `asan-per-file` -- builds `mino_asan` once, then runs each of
+  the ~54 mino test files in its own ASan subprocess. Catches
+  Heisenbugs that hide under full-suite ASan because cumulative
+  heap state across hundreds of preceding tests masks the
+  dangerous phase window. Verified to catch the v0.255.9 GC
+  use-after-free locally: reverting the fix and running this
+  task surfaces `heap-use-after-free at gc_mark_child_push` on
+  `tests/transient_test.clj`. ~16 s locally.
+
+CI nightly (`.github/workflows/ci-nightly.yml`) runs all four
+after the existing soak + GC stress steps. Per-step timeouts:
+gc-fuzz 15min, gc-stress-subset 10min, gc-verify 5min,
+asan-per-file 20min.
+
+Submodule also moves to mino v0.255.9 (the GC ordering fix landed
+in mino).
+
 ## v0.7.7 — Submodule Bump to mino v0.255.7
 
 mino v0.255.7 landed the gcc / mingw portability fixes:

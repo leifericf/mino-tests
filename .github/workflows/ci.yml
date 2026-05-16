@@ -1,0 +1,52 @@
+name: ci
+
+# PR-time smoke + migrated suite. Runs on every push/PR; budget is
+# tight so push latency stays low. Heavier work (full soak, all
+# sanitizer variants, coverage) lives in ci-nightly.yml.
+#
+# This workflow checks out mino-tests with --recurse-submodules, so
+# the mino submodule (pinned via .gitmodules) determines the runtime
+# under test. Bumping the pin via `./mino/mino task bump-mino vX.Y.Z`
+# is the supported way to follow a new mino tag.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Pinned runner labels so a future GHA image bump doesn't
+        # silently shift the matrix.
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (with submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build mino (from submodule)
+        working-directory: mino
+        run: make
+
+      - name: Migrated suite
+        run: ./mino/mino tests/run_migrated.clj
+
+      - name: Fault injection
+        run: ./mino/mino tests/run_fault_inject.clj
+
+      - name: Adversarial smoke (T1..T11)
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+          MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
+        run: ./mino/mino tests/adv/runner.clj --seed 0 --mode smoke

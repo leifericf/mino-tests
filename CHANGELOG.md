@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.5.0 — CI Wiring + Dedup Audit
+
+GitHub Actions workflows land + dedup audit closes overlap with
+mino's tests.
+
+CI workflows:
+
+  - `.github/workflows/ci.yml` -- PR-time smoke. Checks out
+    mino-tests with `submodules: recursive`, builds mino from the
+    submodule, runs `tests/run_migrated.clj` + `tests/run_fault_inject.clj`
+    + the adversarial T1-T11 smoke battery. Matrix: ubuntu-24.04,
+    ubuntu-24.04-arm, macos-14. 15-minute budget.
+  - `.github/workflows/ci-nightly.yml` -- daily heavier work:
+    adversarial soak with random seed, GC stress under
+    MINO_GC_STRESS=1, coverage pass (clang-only, continue-on-error
+    until Cycle C wires the full coverage binding).
+
+Cross-repo hook (lands in mino v0.254.0):
+
+  - mino's `release-gate` composite now detects a sibling
+    mino-tests clone and chains into its adversarial smoke as
+    the final gate step. No hard dependency: a fresh mino clone
+    without mino-tests adjacent prints "skipped satellite
+    smoke" and the gate continues.
+
+Dedup audit:
+
+  - `tests/migrated/creative_test.clj` removed -- zero deftests,
+    just a script that printed values. The probe battery's
+    closure_tco_jit + buffer_caps cover the same surfaces with
+    real assertions; the script-style file belongs in
+    mino-examples (which already exists as a sibling repo) when
+    the user revisits that.
+  - `tests/migrated/ns_parity_run.clj` returned to mino -- it's
+    a runner that requires `tests/ns_isolation_test`,
+    `tests/ns_libs_test`, etc., which all stayed in mino. The
+    runner is not standalone; mino is its home.
+  - `run_migrated.clj` updated to drop both references.
+
+Verified: `mino tests/run_migrated.clj` reports 483 / 3397, all
+green; `mino tests/adv/runner.clj --seed 0 --mode smoke` reports
+11 / 11 probes pass.
+
 ## v0.2.4 — Cycle A Close: Script-Side Probe Battery T1-T11
 
 All eleven script-side adversarial probes land at `tests/adv/script/`.

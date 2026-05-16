@@ -1,0 +1,76 @@
+name: ci-nightly
+
+# Heavier work runs once a day. PR-time CI keeps to the smoke set so
+# push latency stays low; the nightly job catches:
+#   - Adversarial soak (random seed, longer budget)
+#   - GC stress under MINO_GC_STRESS=1
+#   - Coverage report (clang-only; macos-14 runner has clang+llvm-cov)
+#
+# A failure here is shown on the actions tab but doesn't block
+# anything -- the smoke set is the PR-blocking signal.
+
+on:
+  schedule:
+    # 05:00 UTC daily, off-peak. 1h after mino's own 04:00 nightly so
+    # the submodule pin update flows cleanly if both are scheduled.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  soak:
+    name: soak (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 70
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build mino
+        working-directory: mino
+        run: make
+
+      - name: Adversarial soak
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+          MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
+        run: |
+          seed=$(date +%s)
+          echo "Soak seed: $seed"
+          ./mino/mino tests/adv/runner.clj --seed "$seed" --mode soak
+
+      - name: GC stress (MINO_GC_STRESS=1)
+        run: |
+          MINO_GC_STRESS=1 ./mino/mino tests/run_gc_stress.clj
+        timeout-minutes: 15
+
+  coverage:
+    name: coverage (macos-14, clang)
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build mino
+        working-directory: mino
+        run: make
+
+      - name: Coverage pass
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+        run: ./mino/mino task adv-test-coverage || echo "(coverage path not yet wired -- Cycle C work)"

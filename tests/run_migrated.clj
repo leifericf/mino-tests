@@ -34,6 +34,10 @@
 (require "tests/migrated/fault_inject_test")
 
 ;; --- borderline E2E (migrated in v0.253.3) ---
+;; creative_test.clj had no deftests (script-only); removed in
+;; v0.2.5 dedup audit. ns_parity_run.clj returned to mino because
+;; it depends on mino's own tests/ns_*_test.clj files; it isn't a
+;; standalone test.
 (require "tests/migrated/doc_examples_test")
 (require "tests/migrated/bc_jit_deopt_test")
 (require "tests/migrated/spawn_stress_regression")

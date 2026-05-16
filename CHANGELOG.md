@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.1.2 — Mino-side Helpers
+
+Script-side support landed: probes can now load four helpers and
+write tight, deterministic adversarial scripts on top of them.
+
+* `tests/adv/edge_helpers.clj` -- `now-ms`, `elapsed-ms`,
+  `eval-survives`, `ex-shape`, `capture-eval`, `run-quad` (run the
+  same source against `--jit=auto/on/off` and `mino-lean`, return
+  outputs), `quad-byte-identical?`, `emit-verdict`, `with-seed`.
+* `tests/adv/gen.clj` -- seeded RNG + shape generators
+  (`gen-int`, `gen-bool`, `gen-char`, `gen-str`, `gen-sym`,
+  `gen-kw`, `gen-prim`, `gen-vec`, `gen-map`, `gen-nested`). The
+  RNG is a u32 LCG; xorshift64* would be the natural choice but
+  mino's BC compiler currently promotes 64-bit bit-shift-left to
+  bigint inside compiled fns. Workaround documented in mino's
+  `.local/BUGS.md`.
+* `tests/adv/invariants.clj` -- invariant predicates shared across
+  probes: `closure-i=`, `stm-sum-preserved`, `jit-quad-byte-id=`,
+  `reader-idempotent`, `mode-shape-preservation`,
+  `help-version-distinct`, `bounded-depth-classified`,
+  `buffer-cap-classified`, `diag-isolation`.
+* `tests/adv/runner.clj` -- aggregates regression + script probes,
+  parses `--seed` / `--mode`, exits non-zero on any probe failure.
+  Empty registry produces `{:total 0 :passed 0 :failed 0 ...}`.
+
+End-to-end verification: `mino tests/adv/runner.clj --seed 0 --mode
+smoke` boots cleanly and emits the expected zero-probe summary.
+
 ## v0.1.1 — Harness Skeleton (C99)
 
 The C-side probe harness lands as a self-contained ANSI C99 library.

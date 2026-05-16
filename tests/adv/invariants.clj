@@ -15,7 +15,7 @@
       (empty? fs)      true
       (empty? expected) true
       :else
-      (let [actual (try ((first fs)) (catch Throwable e (str e)))
+      (let [actual (try ((first fs)) (catch e (str e)))
             want   (first expected)]
         (if (= actual want)
           (recur (inc i) (rest fs) (rest expected))
@@ -47,7 +47,7 @@
   [v]
   (let [printed (pr-str v)
         round   (try (read-string printed)
-                     (catch Throwable e {:read-error (str e)}))]
+                     (catch e {:read-error (str e)}))]
     (if (= v round)
       true
       {:violated :reader-idempotent
@@ -82,7 +82,7 @@
    clean classified error (MRE/MTY/etc), not a SIGSEGV. Probes call
    this with the exception object."
   [e]
-  (let [shape (try (ex-data e) (catch Throwable _ nil))
+  (let [shape (try (ex-data e) (catch _ nil))
         kind  (when shape (:mino/kind shape))]
     (if kind
       true
@@ -94,7 +94,7 @@
    exceeding a per-form internal-buffer cap should classify, not
    abort."
   [e]
-  (let [shape (try (ex-data e) (catch Throwable _ nil))]
+  (let [shape (try (ex-data e) (catch _ nil))]
     (if (and shape (:mino/kind shape))
       true
       {:violated :buffer-cap-classified

@@ -1,5 +1,51 @@
 # Changelog
 
+## v0.2.4 — Cycle A Close: Script-Side Probe Battery T1-T11
+
+All eleven script-side adversarial probes land at `tests/adv/script/`.
+Each industrialises one bug category from the eleven defects the
+v0.252.1/.2/.3 adversarial passes uncovered, plus three new probe
+categories for memory x JIT, GC invariants, and concurrency primitives.
+
+| # | Category | File | Anchor |
+|---|---|---|---|
+| T1 | Diag state leak across loads | `diag_carry.clj` | reader_col bug |
+| T2 | Cross-mode error-shape preservation | `mode_err_shape.clj` | ex-info loss |
+| T3 | REPL multi-form snippet rendering | `repl_snippets.clj` | snippet blank |
+| T4 | CLI flag / env parsing parity | `cli_parity.clj` | casing asymmetry |
+| T5 | mino vs mino-lean parity | `lean_parity.clj` | help/version |
+| T6 | Bounded recursion / nesting depth | `depth_cliff.clj` | reader SIGSEGV |
+| T7 | Per-form internal-buffer caps | `buffer_caps.clj` | GC_SAVE_MAX |
+| T8 | Closure capture under TCO + JIT | `closure_tco_jit.clj` | TCO env reuse |
+| T9 | Concurrency primitive deadlock | `conc_deadlock.clj` | promise+dotimes |
+| T10 | Memory pressure x JIT compile | `mem_jit.clj` | (new) |
+| T11 | GC live=reachable invariant | `gc_invariant.clj` | (new) |
+
+End-to-end: `mino tests/adv/runner.clj --seed 0 --mode smoke`
+emits 30+ verdict lines (some probes assert multiple invariants)
+and the summary `{:total 11 :passed 11 :failed 0 :seed 0 :mode "smoke"}`.
+
+T8 surfaced a real mino bug during the build: loop+recur inside a
+defn body has all closures capturing iteration-0's value, even
+though the same code at the top level works correctly. The v0.252.3
+self-tail-call fix didn't reach the BC compile path for loop bodies.
+Logged in ../mino/.local/BUGS.md as a candidate for a focused fix
+cycle. The probe stays as the regression that will catch the fix
+when it lands.
+
+T9's `with-timeout` helper also surfaced a separate cross-thread
+visibility bug in `realized?` on promises (same BUGS.md). Worked
+around by relying on the runner's wall-clock budget instead of
+in-probe timeouts.
+
+Mino-specific probe-side adaptations:
+
+  - `catch` binding (mino doesn't take `Throwable`)
+  - `clojure.string/includes?` instead of `.contains` interop
+  - `sh` returns `{:exit N :out S}` (no `:err`); mino's CLI prints
+    errors to stdout in -e mode
+  - `realized?` cross-thread limitation (see above)
+
 ## v0.2.3 — Migration In: Borderline E2E
 
 Fourth migration batch from mino v0.253.3. The five borderline

@@ -46,8 +46,20 @@
   [])
 
 (def script-probes
-  "Live probe battery. Cycle A v0.2.0..v0.2.4 fills this."
-  [])
+  "Live probe battery. Each probe is a mino script that emits one or
+   more verdict lines via emit-verdict. Probes are deliberately small
+   and self-contained; the taxonomy lives in the file names."
+  ["tests/adv/script/diag_carry.clj"
+   "tests/adv/script/mode_err_shape.clj"
+   "tests/adv/script/repl_snippets.clj"
+   "tests/adv/script/cli_parity.clj"
+   "tests/adv/script/lean_parity.clj"
+   "tests/adv/script/depth_cliff.clj"
+   "tests/adv/script/buffer_caps.clj"
+   "tests/adv/script/closure_tco_jit.clj"
+   "tests/adv/script/conc_deadlock.clj"
+   "tests/adv/script/mem_jit.clj"
+   "tests/adv/script/gc_invariant.clj"])
 
 ;; --- driver ---
 
@@ -58,7 +70,7 @@
   (try
     (load-file path)
     (swap! state update :passed inc)
-    (catch Throwable e
+    (catch e
       (println "  ERROR in" path ":" (str e))
       (swap! state #(-> %
                         (update :failed inc)

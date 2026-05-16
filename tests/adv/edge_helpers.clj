@@ -26,7 +26,7 @@
   (try
     (f)
     :ok
-    (catch Throwable e
+    (catch e
       (or (ex-data e)
           {:mino/kind :throwable :mino/message (str e)}))))
 
@@ -63,10 +63,10 @@
    Returns a map keyed by variant -> stdout string.
    The caller decides whether to assert byte-identity."
   [mino-bin mino-lean-bin src-file]
-  {:auto (try (sh! mino-bin "--jit=auto" src-file) (catch Throwable e (str e)))
-   :on   (try (sh! mino-bin "--jit=on"   src-file) (catch Throwable e (str e)))
-   :off  (try (sh! mino-bin "--jit=off"  src-file) (catch Throwable e (str e)))
-   :lean (try (sh! mino-lean-bin          src-file) (catch Throwable e (str e)))})
+  {:auto (try (sh! mino-bin "--jit=auto" src-file) (catch e (str e)))
+   :on   (try (sh! mino-bin "--jit=on"   src-file) (catch e (str e)))
+   :off  (try (sh! mino-bin "--jit=off"  src-file) (catch e (str e)))
+   :lean (try (sh! mino-lean-bin          src-file) (catch e (str e)))})
 
 (defn quad-byte-identical?
   "True iff all four variants produced byte-identical stdout."

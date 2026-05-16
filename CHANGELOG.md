@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.6.0 — Polish: Soak Stop-Conditions + JSON Tail
+
+Runner gains two operational knobs and a richer summary tail:
+
+* `--max-ms <ms>` -- hard wall-clock budget. After the deadline the
+  next probe is skipped and the run summary is emitted.
+* `--continue-on-fail` -- by default the runner stops at the first
+  failure (so a soak doesn't waste budget on a confirmed bug);
+  this flag overrides and lets every probe run.
+* Summary line now includes `:elapsed <ms>` so dashboards can
+  pick up the run duration without parsing the wall-clock from
+  outside.
+
+The combined effect: `mino tests/adv/runner.clj --max-ms 60000
+--continue-on-fail` is the "give me everything in 60 seconds"
+shape; default `mino tests/adv/runner.clj --seed 0 --mode smoke`
+stays the CI-tight shape.
+
+Verified: smoke runs in ~96ms; --max-ms 60000 leaves headroom; the
+deadline-hit path is exercised by `--max-ms 1` (run terminates
+after probe 1 / 2 with the deadline-hit branch taken).
+
 ## v0.4.0 — Coverage + Replay + Regression Auto-Capture
 
 llvm-cov integration + replay-by-seed + auto-captured regression

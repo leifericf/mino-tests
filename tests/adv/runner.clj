@@ -20,7 +20,8 @@
 ;; --- arg parsing ---
 
 (defn- parse-args [args]
-  (loop [args (vec args), opts {:mode "smoke" :seed 0 :replay nil}]
+  (loop [args (vec args), opts {:mode "smoke" :seed 0 :replay nil
+                                :max-ms nil :continue-on-fail false}]
     (cond
       (empty? args)               opts
       (= (first args) "--seed")   (recur (drop 2 args)
@@ -31,6 +32,12 @@
       (= (first args) "--replay") (recur (drop 2 args)
                                          (assoc opts :replay
                                                 (parse-long (second args))))
+      (= (first args) "--max-ms") (recur (drop 2 args)
+                                         (assoc opts :max-ms
+                                                (parse-long (second args))))
+      (= (first args) "--continue-on-fail")
+                                  (recur (drop 1 args)
+                                         (assoc opts :continue-on-fail true))
       :else                       (recur (rest args) opts))))
 
 (def cli-opts (parse-args *command-line-args*))
@@ -114,21 +121,35 @@
     (finally
       (swap! state update :total inc))))
 
+(def start-ms (time-ms))
+
+(defn- deadline-hit? []
+  (when-let [budget (:max-ms cli-opts)]
+    (> (- (time-ms) start-ms) budget)))
+
+(defn- stop-early? []
+  (or (deadline-hit?)
+      (and (not (:continue-on-fail cli-opts))
+           (pos? (:failed @state)))))
+
 (println)
 (println "[runner] regressions:" (count regression-files))
-(doseq [p regression-files] (load-probe p))
+(doseq [p regression-files]
+  (when-not (stop-early?) (load-probe p)))
 
 (println)
 (println "[runner] script probes:" (count script-probes))
-(doseq [p script-probes] (load-probe p))
+(doseq [p script-probes]
+  (when-not (stop-early?) (load-probe p)))
 
 (println)
 (let [s @state]
-  (println (pr-str {:total  (:total s)
-                    :passed (:passed s)
-                    :failed (:failed s)
-                    :seed   effective-seed
-                    :mode   (:mode cli-opts)
-                    :replay (boolean (:replay cli-opts))})))
+  (println (pr-str {:total   (:total s)
+                    :passed  (:passed s)
+                    :failed  (:failed s)
+                    :seed    effective-seed
+                    :mode    (:mode cli-opts)
+                    :replay  (boolean (:replay cli-opts))
+                    :elapsed (- (time-ms) start-ms)})))
 
 (exit (if (zero? (:failed @state)) 0 1))

@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.2.2 — Migration In: C-Side Embed Harnesses
+
+Third migration batch from mino v0.253.2. The multi-state, STM,
+and capability C-side embed harnesses land under
+`tests/migrated_embed/`. They share the same build gap as the
+new C-side adversarial probes — link against mino's runtime
+needs a libmino.a shim that lands in Cycle B v0.3.0. Until
+then, the source is pinned here against the v0.252.x mino API.
+
+Files imported:
+
+  - `migrated_embed/embed_multi_state.c` -- 16 mino_state_t x
+    16 pthreads, asserts the embedding API is safe under the
+    one-state-per-thread contract.
+  - `migrated_embed/embed_stm_test.c`    -- STM Layer 2a smoke
+    (mino_tx_run, alter_c, commute_c, ensure, watches).
+  - `migrated_embed/embed_caps_test.c`   -- capability-gated
+    install surface: minimal, selective caps, install_all,
+    MNS002 diagnostics.
+
 ## v0.2.1 — Migration In: Fuzz / GC Stress / Fault Injection
 
 Second migration batch from mino v0.253.1.

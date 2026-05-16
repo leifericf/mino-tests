@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.7.3 — Targeted Category Generators (BC Closure / Arith / Coll / Ctrl)
+
+Four template-driven generators surface BC compile-path divergences
+random gen_program is unlikely to hit on its own:
+
+* `gen_bc_closure_shapes.clj` -- 8 templates including the v0.255.0
+  anchor (loop+recur fn-capture-per-iteration inside defn) and the
+  fn-returning-fn shape from outer-captures.
+* `gen_bc_arith_shapes.clj` -- 8 templates pinning the v0.255.5
+  bit-shift-left bigint promotion bug, plus xor/and/or chains,
+  ushr, inc/dec on boxed ints, and rem/mod with negative operands.
+* `gen_bc_collection_shapes.clj` -- 8 templates exercising conj,
+  subvec, assoc/dissoc, get-with-default, transient-conj-persistent,
+  nth+count, reduce-kv (sum is order-invariant so the printed
+  witness stays deterministic), and contains? on sets.
+* `gen_bc_control_shapes.clj` -- 8 templates covering ex-info
+  throw/catch, cond chains, nested let/loop with shadowed names,
+  try/catch around quot-div, when chains, dotimes side-effect
+  collector, and if-with-try-in-each-branch.
+
+Each generator is fronted by a `diff_bc_<category>_shapes.clj`
+probe that runs N programs through the quad (20 smoke, 200 soak)
+and auto-captures + shrinks any divergence into
+`tests/adv/regressions/diff-<category>-<seed>-<i>.clj`.
+
+Verified: 80 targeted programs at seed 0 all pass quad-byte-id;
+new probes register in the runner; total smoke run climbs from
+~840 ms to ~1015 ms (16/16 probes green).
+
 ## v0.7.2 — Witness Shrinker (`shrink.clj`)
 
 When `diff_random` finds a quad divergence, the captured regression

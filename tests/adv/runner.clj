@@ -79,7 +79,11 @@
    "tests/adv/script/conc_deadlock.clj"
    "tests/adv/script/mem_jit.clj"
    "tests/adv/script/gc_invariant.clj"
-   "tests/adv/script/diff_random.clj"])
+   "tests/adv/script/diff_random.clj"
+   "tests/adv/script/diff_bc_closure_shapes.clj"
+   "tests/adv/script/diff_bc_arith_shapes.clj"
+   "tests/adv/script/diff_bc_collection_shapes.clj"
+   "tests/adv/script/diff_bc_control_shapes.clj"])
 
 ;; --- driver ---
 

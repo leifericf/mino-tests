@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.8.1 — conc_deadlock Probe Adapts to Host Thread Limit
+
+`tests/adv/script/conc_deadlock.clj`'s `T9.promise-dotimes-fanout`
+probe spawned 10 concurrent futures, which exceeds the
+`mino_set_thread_limit(cpu_count)` cap standalone mino sets on
+small CI runners (GHA `macos-14` has 3 CPUs, `ubuntu-24.04` has 4).
+The 5th `(future ...)` threw `MTH001 thread-limit-exceeded` and
+the probe failed before exercising the closure-capture regression
+shape it was meant to test. Has been red on CI since v0.7.5.
+
+Fix: read `(mino-thread-limit)` once and cap the per-probe fan-out
+at `limit - 1` (leave one slot for the main thread), clamped to
+[2, 10]. The probe still exercises the v0.252.3 anchor pattern --
+N promises, N futures delivering by closed-over i, then dereferencing
+each -- just at N=2 on a 3-CPU host and N=10 on a developer
+machine. T9.stm-zero-sum scales the same way (workers = cap / 2).
+
+Local: 17/17 probes green; `T9.promise-dotimes-fanout` reports
+`:n 10` on a 12-core developer host.
+
 ## v0.8.0 — GC Safeguards + Submodule Bump to mino v0.255.9
 
 Four new tasks added after the v0.255.6/.7/.8 CI hang at

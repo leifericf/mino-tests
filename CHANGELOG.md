@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.2.0 — Migration In: Concurrency-Heavy + Async Soak
+
+The first batch from mino v0.253.0 lands here. 313 tests / 538
+assertions move from mino's tests/ to `tests/migrated/`, pairing
+with the unit-test split codified in mino's CHANGELOG entry for
+v0.253.0.
+
+Files imported:
+
+  - `migrated/stm_concurrent_test.clj` — multi-thread STM
+    contention; commit invariants under load.
+  - `migrated/host_threads_test.clj` — host-thread budget,
+    lifecycle, pool registration.
+  - `migrated/agent_test.clj` (511 lines) — agent fan-out, send
+    vs send-off, watch dispatch.
+  - `migrated/regex_reentrant_test.clj` — multi-thread regex
+    compile + match.
+  - `migrated/async_alts_test.clj` (alts!! / alts! / priority)
+  - `migrated/async_api_test.clj` (basic API surface)
+  - `migrated/async_blocking_test.clj` (<!! / >!! semantics)
+  - `migrated/async_buffer_test.clj` (buffer policies + behaviour)
+  - `migrated/async_combinators_test.clj` (mix, merge, pipe,
+    onto-chan, etc.)
+  - `migrated/async_conformance_test.clj` (1056 lines, full
+    cross-port Clojure parity)
+  - `migrated/async_go_test.clj` (go-block stress)
+  - `migrated/async_mult_pub_test.clj` (mult / tap / pub / sub)
+  - `migrated/async_timer_test.clj` (timer scheduling)
+
+* `tests/run_migrated.clj` — aggregator. Loads suite-mode, requires
+  every migrated file, runs the registry once. Same shape as mino's
+  `tests/run.clj`.
+
+Verified end-to-end: `mino tests/run_migrated.clj` reports
+`313 tests, 538 assertions: 538 passed, 0 failed, 0 errors`.
+
 ## v0.1.3 — Cross-state Topology Library
 
 Cross-runtime test topologies land as C99 source. Ring / star / mesh

@@ -29,9 +29,71 @@
     (println "  exec:" bin runner "--seed" seed "--mode" mode)
     (try
       (println (sh! bin runner "--seed" seed "--mode" mode))
+      0
       (catch Throwable e
         (println "  runner failed:" (str e))
-        (throw e)))))
+        1))))
+
+(defn mino-src-root
+  "Where to find the runtime source / mino.h for harness compilation.
+   MINO_DEV_ROOT lets developers point at a local working copy of mino
+   that's ahead of the submodule pin (the standing case during the
+   no-push-without-ask freeze); defaults to the submodule under mino/."
+  []
+  (or (getenv "MINO_DEV_ROOT")
+      (str (repo-root) "/mino")))
+
+;; Explicit list of probe TUs to compile in. New probes register
+;; themselves here so we don't depend on a directory walk (mino's
+;; file primitives only cover existence + mtime, not enumeration).
+(def embed-probe-srcs
+  ["tests/adv/embed/adv_smoke.c"])
+
+(defn build-harness
+  "Compile the C-side probe binary at tests/adv/build/adv_test_<variant>.
+   Links harness.c + driver.c + embed-probe-srcs against mino's
+   static lib (mino/libmino.a). Variant selects the sanitizer recipe."
+  [variant]
+  (let [root      (repo-root)
+        mino-root (mino-src-root)
+        cc        (or (getenv "CC") "cc")
+        out-dir   (str root "/tests/adv/build")
+        out       (str out-dir "/adv_test_" (name variant))
+        sanitize  (case variant
+                    :asan  ["-fsanitize=address" "-fsanitize=undefined"
+                            "-fno-omit-frame-pointer" "-g" "-O1"]
+                    :tsan  ["-fsanitize=thread"
+                            "-fno-omit-frame-pointer" "-g" "-O1"]
+                    :ubsan ["-fsanitize=undefined"
+                            "-fno-omit-frame-pointer" "-g" "-O1"]
+                    :cov   ["-fprofile-instr-generate" "-fcoverage-mapping"
+                            "-g" "-O1"]
+                    ["-O2"])
+        lib-a     (str mino-root "/libmino.a")
+        includes  ["-I" (str mino-root "/src")
+                   "-I" (str mino-root "/src/public")
+                   "-I" (str mino-root "/src/runtime")
+                   "-I" (str root "/tests/adv")]
+        flags     (concat ["-std=c99" "-Wall" "-Wpedantic"]
+                          sanitize
+                          includes)
+        srcs      (concat [(str root "/tests/adv/harness.c")
+                           (str root "/tests/adv/driver.c")]
+                          (map #(str root "/" %) embed-probe-srcs))
+        argv      (concat [cc] flags srcs [lib-a "-lm" "-lpthread"
+                                            "-o" out])]
+    (println "  cc:" cc)
+    (println "  variant:" variant)
+    (println "  out:" out)
+    (println "  sources:" (count srcs) "files")
+    (sh! "mkdir" "-p" out-dir)
+    (try
+      (println (apply sh! argv))
+      (println "  built:" out)
+      0
+      (catch Throwable e
+        (println "  build failed:" (str e))
+        1))))
 
 (defn cov-run
   "Build mino_cov + run suite + emit llvm-cov html. Clang-only.

@@ -54,6 +54,29 @@
 
 ;; --- run-quad: parity across auto / on / off / lean ---
 
+(def ^:private jit-disabled-warning-prefix
+  "Prefix mino emits on stderr when --jit=on is requested on a
+   build with the JIT compiled out (host arch not matched by the
+   stencil set, or MINO_CPJIT_X86_64_LINUX etc. flag not passed).
+   The warning text is one line; we strip it from captured stdout
+   before byte-id comparison so the quad doesn't false-positive
+   on hosts where the regular mino binary itself is interpreter-
+   only. The warning is helpful for interactive users, but for
+   the differential test it's pure noise."
+  "mino: note: this build has the JIT compiled out")
+
+(defn- strip-jit-disabled-warning
+  "Drop the JIT-disabled-warning line from a captured stdout
+   string. No-op when the line isn't present."
+  [s]
+  (if (and s (clojure.string/includes? s jit-disabled-warning-prefix))
+    (clojure.string/join "\n"
+      (filterv (fn [ln]
+                 (not (clojure.string/includes? ln
+                                                jit-disabled-warning-prefix)))
+               (clojure.string/split-lines s)))
+    s))
+
 (defn run-quad
   "Run the same source against four binary/mode combinations:
      :auto -- mino --jit=auto
@@ -63,9 +86,17 @@
    Returns a map keyed by variant -> {:exit N :out S} from sh.
    The caller decides whether to assert byte-identity. Uses sh
    (not sh!) so a non-zero child exit returns the captured stdout
-   instead of throwing -- error runs are part of the comparison."
+   instead of throwing -- error runs are part of the comparison.
+
+   Filters mino's --jit=on-on-no-JIT-build warning out of every
+   captured stdout so the quad stays comparable on hosts where
+   the regular mino binary has the JIT compiled out (the warning
+   would otherwise make every program a false-positive divergence
+   on such hosts)."
   [mino-bin mino-lean-bin src-file]
-  (let [pick (fn [r] (select-keys r [:exit :out]))]
+  (let [pick (fn [r]
+               {:exit (:exit r)
+                :out  (strip-jit-disabled-warning (:out r))})]
     {:auto (pick (sh mino-bin "--jit=auto" src-file))
      :on   (pick (sh mino-bin "--jit=on"   src-file))
      :off  (pick (sh mino-bin "--jit=off"  src-file))

@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.8.3 — Strip JIT-Disabled Warning from Quad-Byte-ID Compare
+
+`run-quad` (`tests/adv/edge_helpers.clj`) and
+`T5.stdout-quad-byte-identical` (`tests/adv/script/lean_parity.clj`)
+now strip mino's `--jit=on`-on-no-JIT-build stderr warning before
+the byte-id comparison. The warning text:
+
+    mino: note: this build has the JIT compiled out;
+    --jit=on / MINO_JIT=on has no effect, interpreter will run
+
+is helpful for interactive users but pure noise for the
+differential test. On x86_64 Linux the regular mino binary
+itself has the JIT compiled out (no `MINO_CPJIT_X86_64_LINUX`
+build flag); the warning bled into captured stdout via sh's
+`2>&1` and made every random program flag as a quad divergence.
+
+This was the residual ubuntu-24.04 failure after v0.8.2's
+mino-lean build fix cleared the lean-exit=127 wall. Local on
+arm64 macOS keeps 17/17 green (no warning fires there because
+the JIT is compiled in).
+
 ## v0.8.2 — CI Builds mino-lean + Keeps regressions/ Dir
 
 Two CI plumbing fixes pulled out by v0.8.1's now-passing

@@ -39,13 +39,19 @@
 (defn- probe-stdout-quad []
   ;; A deterministic non-JIT-introspective program should produce
   ;; byte-identical stdout across mino auto/on/off + mino-lean.
+  ;; On hosts where the regular mino binary has the JIT compiled
+  ;; out (e.g., x86_64 Linux without MINO_CPJIT_X86_64_LINUX),
+  ;; --jit=on emits a one-line stderr warning that gets merged
+  ;; into stdout by sh's 2>&1; strip it before comparing so the
+  ;; quad doesn't false-positive on those hosts.
   (when (file-exists? lean-bin)
     (let [tmp "/tmp/mino-tests-stdout-quad.clj"
           _   (spit tmp "(println (reduce + (range 10)))\n(println :done)\n")
-          a   (sh mino-bin "--jit=auto" tmp)
-          o   (sh mino-bin "--jit=on"   tmp)
-          f   (sh mino-bin "--jit=off"  tmp)
-          l   (sh lean-bin tmp)
+          strip (fn [r] (update r :out strip-jit-disabled-warning))
+          a   (strip (sh mino-bin "--jit=auto" tmp))
+          o   (strip (sh mino-bin "--jit=on"   tmp))
+          f   (strip (sh mino-bin "--jit=off"  tmp))
+          l   (strip (sh lean-bin tmp))
           ok  (and (= (:out a) (:out o))
                    (= (:out a) (:out f))
                    (= (:out a) (:out l)))]

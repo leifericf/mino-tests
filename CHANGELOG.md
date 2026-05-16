@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.7 — Submodule Bump to mino v0.255.7
+
+mino v0.255.7 landed the gcc / mingw portability fixes:
+* `__has_feature` no longer trips gcc preprocessor.
+* `strcasecmp` resolves via `<strings.h>` on Linux + `_stricmp`
+  on Windows.
+* Empty-TU sentinels in `src/eval/bc/jit/*.c` for targets where
+  `MINO_CPJIT_HOST` isn't matched.
+* `mino_jit_invoke` stub signature now matches the header.
+
+Verified: 17/17 probes green at seed 0 against the new pin.
+
 ## v0.7.6 — Submodule Bump to mino v0.255.6
 
 mino v0.255.6 fixed the BC compile-path try_depth bug that

@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.3 — Cross-state Topology Library
+
+Cross-runtime test topologies land as C99 source. Ring / star / mesh
+of N states with per-node mutexes; messages travel via `mino_clone`
+into the destination's inbox so its GC roots stay clean.
+
+* `tests/adv/topology.{h,c}` -- `adv_topo_build`, `adv_topo_destroy`,
+  `adv_topo_post`, `adv_topo_step`, `adv_topo_processed`. Each node
+  owns a `mino_state_t`, a pthread mutex, and an inbox of cloned
+  values from peers. Successor wiring is data-driven via the
+  `next[]` table so the step rule is uniform across shapes.
+* `tests/adv/embed/adv_topo_ring_smoke.c` -- 3-state ring smoke
+  probe. Posts an int at node 0, steps until quiescent, asserts
+  every node processed at least one message. Sanitizer-clean.
+* `lib/mino_tests/tasks/impl.clj` -- `build-harness` task helper.
+  Cycle Z.3 lands the source + the build command; the actual link
+  step waits on a libmino.a shim that lands in Cycle B v0.3.0
+  (mino doesn't currently produce a static lib).
+
 ## v0.1.2 — Mino-side Helpers
 
 Script-side support landed: probes can now load four helpers and

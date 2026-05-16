@@ -47,18 +47,34 @@
 ;; themselves here so we don't depend on a directory walk (mino's
 ;; file primitives only cover existence + mtime, not enumeration).
 (def embed-probe-srcs
-  ["tests/adv/embed/adv_smoke.c"])
+  ["tests/adv/embed/adv_smoke.c"
+   "tests/adv/embed/adv_topo_ring_smoke.c"])
+
+;; Shared library files compiled in alongside the probes.
+(def harness-libs
+  ["tests/adv/harness.c"
+   "tests/adv/topology.c"
+   "tests/adv/driver.c"])
+
+;; --- C-side harness build ---
+;;
+;; Cycle Z.3 lands the source (harness.c, topology.c, driver.c, two
+;; smoke probes). Linking against mino's runtime requires a libmino.a
+;; that mino itself doesn't currently produce -- only the binary +
+;; per-module .o files exist. The Cycle B v0.3.x work wires a
+;; `make-libmino-a` shim into mino's task table and turns this stub
+;; into a real build; until then it prints what it would do.
 
 (defn build-harness
   "Compile the C-side probe binary at tests/adv/build/adv_test_<variant>.
-   Links harness.c + driver.c + embed-probe-srcs against mino's
-   static lib (mino/libmino.a). Variant selects the sanitizer recipe."
+   Variant selects the sanitizer recipe: :asan / :tsan / :ubsan / :cov
+   / nil for the default release build."
   [variant]
   (let [root      (repo-root)
         mino-root (mino-src-root)
         cc        (or (getenv "CC") "cc")
         out-dir   (str root "/tests/adv/build")
-        out       (str out-dir "/adv_test_" (name variant))
+        out       (str out-dir "/adv_test_" (name (or variant :release)))
         sanitize  (case variant
                     :asan  ["-fsanitize=address" "-fsanitize=undefined"
                             "-fno-omit-frame-pointer" "-g" "-O1"]
@@ -75,25 +91,30 @@
                    "-I" (str mino-root "/src/runtime")
                    "-I" (str root "/tests/adv")]
         flags     (concat ["-std=c99" "-Wall" "-Wpedantic"]
-                          sanitize
-                          includes)
-        srcs      (concat [(str root "/tests/adv/harness.c")
-                           (str root "/tests/adv/driver.c")]
+                          sanitize includes)
+        srcs      (concat (map #(str root "/" %) harness-libs)
                           (map #(str root "/" %) embed-probe-srcs))
         argv      (concat [cc] flags srcs [lib-a "-lm" "-lpthread"
                                             "-o" out])]
-    (println "  cc:" cc)
-    (println "  variant:" variant)
-    (println "  out:" out)
-    (println "  sources:" (count srcs) "files")
+    (println "  cc:        " cc)
+    (println "  variant:   " (name (or variant :release)))
+    (println "  out:       " out)
+    (println "  sources:   " (count srcs) "files")
     (sh! "mkdir" "-p" out-dir)
-    (try
-      (println (apply sh! argv))
-      (println "  built:" out)
-      0
-      (catch Throwable e
-        (println "  build failed:" (str e))
-        1))))
+    (if (file-exists? lib-a)
+      (try
+        (println (apply sh! argv))
+        (println "  built:" out)
+        0
+        (catch Throwable e
+          (println "  build failed:" (str e))
+          1))
+      (do
+        (println "  SKIP: missing" lib-a)
+        (println "  (mino doesn't yet produce libmino.a; this build")
+        (println "   path activates in Cycle B v0.3.0 once mino's tasks")
+        (println "   gain a make-libmino-a target.)")
+        0))))
 
 (defn cov-run
   "Build mino_cov + run suite + emit llvm-cov html. Clang-only.

@@ -1,38 +1,32 @@
 ;; gen.clj -- seeded shape generators for adversarial probes.
 ;;
-;; The RNG is a linear congruential generator parameterised in u32
-;; space (MMIX / Knuth constants). xorshift64* would be the natural
-;; choice, but mino's BC compiler currently promotes a 64-bit
-;; bit-shift-left to bigint inside compiled fns (see .local/BUGS.md
-;; in the main repo), which trips bit-xor's int-only check. A u32 LCG
-;; sidesteps that and is plenty random for shape-fuzzing.
+;; xorshift64* with the standard Numerical Recipes finalizer. The
+;; multiplication step uses unchecked-multiply so the i64 wrap is
+;; well-defined; the shift steps use the BC fast-path which (since
+;; mino v0.255.5) routes bitwise ops through mino_int_wrap and
+;; doesn't promote to bigint.
 
 (def *rng* (atom 1))
 
 (defn seed!
-  "Reset the RNG seed. Stored as a positive i32; zero is OK for
-   an LCG (the increment carries it out of zero)."
+  "Reset the RNG seed. xorshift64* has an all-zero fixed point; a
+   zero seed is replaced with the splitmix64 constant."
   [s]
-  (reset! *rng* (bit-and 0xFFFFFFFF s)))
-
-(defn next-u32
-  "LCG step: x' = (a*x + c) mod 2^32 with MMIX constants."
-  []
-  (let [x  @*rng*
-        n  (bit-and 0xFFFFFFFF
-                    (+ (unchecked-multiply x 1103515245)
-                       12345))]
-    (reset! *rng* n)
-    n))
+  (reset! *rng* (if (zero? s) 0x9E3779B97F4A7C15 s)))
 
 (defn next-u64
-  "Compose a 64-bit value from two LCG steps. Used by callers that
-   want a wider range; in this codebase nearly everyone uses
-   next-u32 directly."
+  "xorshift64* step. Uses unchecked-multiply for the finalizer so
+   the i64 wrap is well-defined."
   []
-  (let [hi (next-u32)
-        lo (next-u32)]
-    (+ (bit-shift-left hi 32) lo)))
+  (let [x  @*rng*
+        x1 (bit-xor x (unsigned-bit-shift-right x 12))
+        x2 (bit-xor x1 (bit-shift-left x1 25))
+        x3 (bit-xor x2 (unsigned-bit-shift-right x2 27))]
+    (reset! *rng* x3)
+    (unchecked-multiply x3 0x2545F4914F6CDD1D)))
+
+(defn next-u32 []
+  (bit-and 0xFFFFFFFF (unsigned-bit-shift-right (next-u64) 32)))
 
 (defn gen-int
   ([] (gen-int -1000 1000))

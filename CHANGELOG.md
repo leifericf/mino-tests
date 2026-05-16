@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.1 — gen.clj Switches Back to xorshift64*
+
+mino v0.255.5 fixed the BC compiler's bitwise-fast-path bigint
+promotion bug that gen.clj's xorshift64* surfaced during Cycle Z.2.
+With the fix landed, gen.clj reverts to the proper xorshift64*
+recipe.
+
+Verified: all 11 script-side probes still pass.
+
 ## v0.6.0 — Polish: Soak Stop-Conditions + JSON Tail
 
 Runner gains two operational knobs and a richer summary tail:

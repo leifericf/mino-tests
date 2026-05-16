@@ -36,8 +36,15 @@ jobs:
           submodules: recursive
 
       - name: Build mino (from submodule)
+        # `make` bootstraps ./mino. `./mino task build-lean` then
+        # builds ./mino-lean (the JIT-free distributable binary)
+        # so the diff-random quad-byte-id probe can spawn it.
+        # Without the lean build the probe sees lean-exit=127
+        # for every program and flags every program as a divergence.
         working-directory: mino
-        run: make
+        run: |
+          make
+          ./mino task build-lean
 
       - name: Migrated suite
         run: ./mino/mino tests/run_migrated.clj

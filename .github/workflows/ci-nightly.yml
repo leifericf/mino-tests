@@ -35,8 +35,13 @@ jobs:
           submodules: recursive
 
       - name: Build mino
+        # `make` bootstraps ./mino. `./mino task build-lean` then
+        # builds ./mino-lean so probes that compare across the
+        # auto/on/off/lean quad have a binary to spawn.
         working-directory: mino
-        run: make
+        run: |
+          make
+          ./mino task build-lean
 
       - name: Adversarial soak
         env:
@@ -118,8 +123,13 @@ jobs:
           submodules: recursive
 
       - name: Build mino
+        # `make` bootstraps ./mino. `./mino task build-lean` then
+        # builds ./mino-lean so probes that compare across the
+        # auto/on/off/lean quad have a binary to spawn.
         working-directory: mino
-        run: make
+        run: |
+          make
+          ./mino task build-lean
 
       - name: Coverage pass
         env:

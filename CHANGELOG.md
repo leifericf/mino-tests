@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.8.2 — CI Builds mino-lean + Keeps regressions/ Dir
+
+Two CI plumbing fixes pulled out by v0.8.1's now-passing
+adversarial-smoke step:
+
+* `.github/workflows/ci.yml` + `ci-nightly.yml`: the build step
+  ran `make` (bootstraps `./mino`) but not `./mino task build-lean`,
+  so `./mino-lean` was missing. `diff_random.clj` ran the quad
+  with `MINO_LEAN_BIN=...` pointing at the non-existent binary; the
+  `:lean` variant exited 127 ("command not found") while
+  auto/on/off all exited 0, so every random program flagged as a
+  quad divergence. Builds now produce both binaries.
+
+* `tests/adv/regressions/.gitkeep`: git doesn't track empty
+  directories, so the regressions/ folder didn't exist after a
+  fresh CI checkout. `diff_random.clj`'s auto-capture tried to
+  `spit` into a missing directory and the `MHO001 cannot open
+  file` warnings spammed the log. The .gitkeep ensures the dir
+  survives clone.
+
+These were latent: the diff-test probes were always going to
+report false positives on CI until the lean binary was actually
+built. v0.8.1's T9 fix uncovered them by clearing the prior
+fail-fast point.
+
 ## v0.8.1 — conc_deadlock Probe Adapts to Host Thread Limit
 
 `tests/adv/script/conc_deadlock.clj`'s `T9.promise-dotimes-fanout`

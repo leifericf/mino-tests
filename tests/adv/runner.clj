@@ -14,6 +14,7 @@
 
 (load-file "tests/adv/edge_helpers.clj")
 (load-file "tests/adv/gen.clj")
+(load-file "tests/adv/gen_program.clj")
 (load-file "tests/adv/invariants.clj")
 (require '[clojure.string :as str])
 
@@ -77,7 +78,8 @@
    "tests/adv/script/closure_tco_jit.clj"
    "tests/adv/script/conc_deadlock.clj"
    "tests/adv/script/mem_jit.clj"
-   "tests/adv/script/gc_invariant.clj"])
+   "tests/adv/script/gc_invariant.clj"
+   "tests/adv/script/diff_random.clj"])
 
 ;; --- driver ---
 

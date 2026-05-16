@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.7.1 — Differential Quad Runner (`script/diff_random.clj`)
+
+Generated programs from v0.7.0 are now walked through the four
+runtime shapes (auto / on / off / lean) and the `{:exit :out}` map
+is required to match byte-for-byte across all four. On a mismatch,
+the program source, seed, and four divergent outputs are auto-captured
+to `tests/adv/regressions/diff-random-<seed>-<i>.clj` with a
+self-contained re-run shim; the regression then loads on every
+subsequent runner invocation and re-asserts the same quad.
+
+Walk size: 100 programs in smoke (~830 ms locally), 1000 programs
+in soak. The seed is XOR'd with a probe-specific tag so re-running
+with `--replay <seed>` reproduces the same program stream regardless
+of probe load order.
+
+Verified: 1000 programs across 10 seeds (1, 2, 3, 5, 7, 11, 13, 17,
+23, 31) pass quad-byte-id with zero divergences -- strong baseline
+evidence that the four runtimes agree on the random-program shape
+gen_program emits.
+
 ## v0.7.0 — Seeded mino Program Generator (`gen_program.clj`)
 
 First piece of the differential-test infrastructure. `gen_program.clj`

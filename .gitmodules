@@ -1,0 +1,3 @@
+[submodule "mino"]
+	path = mino
+	url = git@github.com:leifericf/mino.git

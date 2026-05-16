@@ -1,0 +1,29 @@
+;; mino-tests -- adversarial / E2E / soak battery for mino.
+;; Pairs with the unit-test suite in the main mino repo.
+;;
+;; The mino submodule under mino/ is the runtime under test. Build
+;; with `cd mino && make`, then run from this dir:
+;;
+;;   ./mino/mino task adv-test
+;;   ./mino/mino task adv-test-soak
+;;   ./mino/mino task adv-test-coverage      ; clang-only
+;;   ./mino/mino task adv-test-sanitizers    ; ASan + UBSan + TSan
+;;
+;; MINO_BIN env overrides the binary used by the runner.
+
+{:paths ["lib"]
+ :tasks
+ {adv-test          {:doc  "Smoke battery: fixed seed=0, under 30s, CI uses this"
+                     :task mino-tests.tasks/adv-test}
+  adv-test-soak     {:doc  "Full soak: random seed, several minutes, nightly CI"
+                     :task mino-tests.tasks/adv-test-soak}
+  adv-test-coverage {:doc  "Clang-only llvm-cov pass; writes tests/adv/coverage/report.html"
+                     :task mino-tests.tasks/adv-test-coverage}
+  adv-test-sanitizers {:doc "Triple sanitizer pass: ASan + UBSan + TSan"
+                       :task mino-tests.tasks/adv-test-sanitizers}
+  build-cov         {:doc  "Build mino_cov instrumented binary"
+                     :task mino-tests.tasks/build-cov}
+  bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
+                     :task mino-tests.tasks/bump-mino}
+  ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"
+                     :task mino-tests.tasks/ci-matrix}}}

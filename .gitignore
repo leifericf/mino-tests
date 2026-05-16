@@ -1,0 +1,24 @@
+# local-only scratch / status / plans
+.local/
+*.local
+.DS_Store
+
+# build artifacts
+*.o
+*.a
+*.dylib
+*.so
+*.profraw
+*.profdata
+tests/adv/build/
+tests/adv/coverage/report.html
+tests/adv/coverage/*.html
+tests/adv/coverage/snapshots/*.tmp
+tests/adv/coverage/*.profraw
+tests/adv/coverage/*.profdata
+tests/adv/coverage/index.json
+
+# sanitizer raw output
+*.asan.log
+*.tsan.log
+*.ubsan.log

@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.2.1 — Migration In: Fuzz / GC Stress / Fault Injection
+
+Second migration batch from mino v0.253.1.
+
+Files imported:
+
+  - `migrated/reader_fuzz_test.clj`
+  - `migrated/gc_generational_test.clj`,
+    `migrated/gc_incremental_test.clj`
+  - `migrated/regression_hamt_str_churn.clj`
+  - `migrated/fault_inject_test.clj`
+
+Promoted to top-level runners (run via task, not via run_migrated):
+
+  - `tests/run_fault_inject.clj` -- requires the test file
+    + invokes `(run-tests-and-exit)`.
+  - `tests/run_gc_stress.clj` -- standalone deftest file (no
+    intermediate require chain) for use under MINO_GC_STRESS=1.
+
+New tasks in mino.edn:
+
+  - `test-migrated`     -- runs run_migrated.clj
+  - `test-fault-inject` -- runs run_fault_inject.clj
+  - `test-gc-stress`    -- runs run_gc_stress.clj under
+    MINO_GC_STRESS=1
+
+Verified: `test-migrated` reports 384 tests / 3204 assertions,
+`test-fault-inject` reports 5 / 5, `test-gc-stress` reports
+6 / 17. All green.
+
 ## v0.2.0 — Migration In: Concurrency-Heavy + Async Soak
 
 The first batch from mino v0.253.0 lands here. 313 tests / 538

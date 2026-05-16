@@ -45,3 +45,16 @@
 (defn ci-matrix [& _]
   (println "[mino-tests] ci-matrix (Linux Docker images)")
   (impl/ci-matrix))
+
+(defn test-migrated [& _]
+  (println "[mino-tests] test-migrated (tests moved out of mino)")
+  (impl/run-clj-file "tests/run_migrated.clj"))
+
+(defn test-fault-inject [& _]
+  (println "[mino-tests] test-fault-inject (simulated OOM)")
+  (impl/run-clj-file "tests/run_fault_inject.clj"))
+
+(defn test-gc-stress [& _]
+  (println "[mino-tests] test-gc-stress (MINO_GC_STRESS=1)")
+  (impl/run-clj-file-with-env {"MINO_GC_STRESS" "1"}
+                              "tests/run_gc_stress.clj"))

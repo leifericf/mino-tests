@@ -19,6 +19,31 @@
 (defn- runner-path [name]
   (str (repo-root) "/tests/adv/" name))
 
+(defn run-clj-file
+  "Invoke MINO_BIN against a top-level .clj file in this repo.
+   Returns 0 on green, 1 on non-zero exit. Used by test-migrated /
+   test-fault-inject."
+  [rel-path]
+  (let [bin (mino-bin)
+        path (str (repo-root) "/" rel-path)]
+    (println "  exec:" bin path)
+    (try (println (sh! bin path)) 0
+         (catch Throwable e
+           (println "  failed:" (str e)) 1))))
+
+(defn run-clj-file-with-env
+  "Like run-clj-file but with extra env vars set for the child."
+  [env-map rel-path]
+  (let [bin (mino-bin)
+        path (str (repo-root) "/" rel-path)
+        argv (concat ["env"]
+                     (mapcat (fn [[k v]] [(str k "=" v)]) env-map)
+                     [bin path])]
+    (println "  exec:" (clojure.string/join " " argv))
+    (try (println (apply sh! argv)) 0
+         (catch Throwable e
+           (println "  failed:" (str e)) 1))))
+
 (defn run-script-suite
   "Run the script-side adversarial runner with the given mode/seed."
   [opts]

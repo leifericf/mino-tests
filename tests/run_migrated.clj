@@ -26,6 +26,13 @@
 (require "tests/migrated/async_mult_pub_test")
 (require "tests/migrated/async_timer_test")
 
+;; --- fuzz / GC stress / fault-injection (migrated in v0.253.1) ---
+(require "tests/migrated/reader_fuzz_test")
+(require "tests/migrated/gc_generational_test")
+(require "tests/migrated/gc_incremental_test")
+(require "tests/migrated/regression_hamt_str_churn")
+(require "tests/migrated/fault_inject_test")
+
 (reset! clojure.test/suite-mode false)
 
 (run-tests-and-exit)

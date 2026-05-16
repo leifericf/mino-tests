@@ -26,4 +26,10 @@
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"
-                     :task mino-tests.tasks/ci-matrix}}}
+                     :task mino-tests.tasks/ci-matrix}
+  test-migrated     {:doc  "Run the tests migrated out of mino's tests/ (sub-second per test)"
+                     :task mino-tests.tasks/test-migrated}
+  test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
+                     :task mino-tests.tasks/test-fault-inject}
+  test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"
+                     :task mino-tests.tasks/test-gc-stress}}}

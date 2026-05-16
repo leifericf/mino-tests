@@ -17,6 +17,10 @@
                      :task mino-tests.tasks/adv-test}
   adv-test-soak     {:doc  "Full soak: random seed, several minutes, nightly CI"
                      :task mino-tests.tasks/adv-test-soak}
+  diff-test         {:doc  "Differential probes only (smoke): random + targeted + JIT, ~1s"
+                     :task mino-tests.tasks/diff-test}
+  diff-test-soak    {:doc  "Differential probes (soak): 1000 random + 200/category, random seed"
+                     :task mino-tests.tasks/diff-test-soak}
   adv-test-coverage {:doc  "Clang-only llvm-cov pass; writes tests/adv/coverage/report.html"
                      :task mino-tests.tasks/adv-test-coverage}
   adv-test-sanitizers {:doc "Triple sanitizer pass: ASan + UBSan + TSan"

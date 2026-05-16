@@ -47,6 +47,21 @@ jobs:
           echo "Soak seed: $seed"
           ./mino/mino tests/adv/runner.clj --seed "$seed" --mode soak
 
+      - name: Differential soak (diff-test-soak)
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+          MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
+        timeout-minutes: 60
+        run: ./mino/mino task diff-test-soak
+
+      - name: Upload diff regressions on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-regressions-soak-${{ matrix.os }}
+          path: tests/adv/regressions/diff-*
+          if-no-files-found: ignore
+
       - name: GC stress (MINO_GC_STRESS=1)
         run: |
           MINO_GC_STRESS=1 ./mino/mino tests/run_gc_stress.clj

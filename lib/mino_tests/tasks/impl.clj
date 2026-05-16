@@ -45,15 +45,20 @@
            (println "  failed:" (str e)) 1))))
 
 (defn run-script-suite
-  "Run the script-side adversarial runner with the given mode/seed."
+  "Run the script-side adversarial runner with the given mode/seed.
+   Optional :only restricts probes by path substring (used by
+   diff-test to skip the T1..T11 battery)."
   [opts]
   (let [bin    (mino-bin)
         runner (runner-path "runner.clj")
         seed   (str (or (:seed opts) 0))
-        mode   (name (or (:mode opts) :smoke))]
-    (println "  exec:" bin runner "--seed" seed "--mode" mode)
+        mode   (name (or (:mode opts) :smoke))
+        only   (:only opts)
+        argv   (cond-> [bin runner "--seed" seed "--mode" mode]
+                 only (concat ["--only" only]))]
+    (println "  exec:" (clojure.string/join " " argv))
     (try
-      (println (sh! bin runner "--seed" seed "--mode" mode))
+      (println (apply sh! argv))
       0
       (catch e
         (println "  runner failed:" (str e))

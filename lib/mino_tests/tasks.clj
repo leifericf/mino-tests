@@ -22,6 +22,16 @@
     (println "  seed:" seed)
     (impl/run-script-suite {:mode :soak :seed seed})))
 
+(defn diff-test [& _]
+  (println "[mino-tests] diff-test (smoke, diff probes only, seed=0)")
+  (impl/run-script-suite {:mode :smoke :seed 0 :only "diff_"}))
+
+(defn diff-test-soak [& _]
+  (let [seed (mod (System/currentTimeMillis) 1000000)]
+    (println "[mino-tests] diff-test-soak (diff probes, random seed)")
+    (println "  seed:" seed)
+    (impl/run-script-suite {:mode :soak :seed seed :only "diff_"})))
+
 (defn adv-test-coverage [& _]
   (println "[mino-tests] adv-test-coverage (clang llvm-cov)")
   (impl/cov-run))

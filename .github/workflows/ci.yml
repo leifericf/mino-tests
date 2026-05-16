@@ -50,3 +50,18 @@ jobs:
           MINO_BIN: ${{ github.workspace }}/mino/mino
           MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
         run: ./mino/mino tests/adv/runner.clj --seed 0 --mode smoke
+
+      - name: Differential smoke (diff-test)
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+          MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
+        timeout-minutes: 3
+        run: ./mino/mino task diff-test
+
+      - name: Upload diff regressions on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-regressions-${{ matrix.os }}
+          path: tests/adv/regressions/diff-*
+          if-no-files-found: ignore

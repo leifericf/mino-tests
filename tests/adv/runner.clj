@@ -22,7 +22,8 @@
 
 (defn- parse-args [args]
   (loop [args (vec args), opts {:mode "smoke" :seed 0 :replay nil
-                                :max-ms nil :continue-on-fail false}]
+                                :max-ms nil :continue-on-fail false
+                                :only nil}]
     (cond
       (empty? args)               opts
       (= (first args) "--seed")   (recur (drop 2 args)
@@ -36,6 +37,8 @@
       (= (first args) "--max-ms") (recur (drop 2 args)
                                          (assoc opts :max-ms
                                                 (parse-long (second args))))
+      (= (first args) "--only")   (recur (drop 2 args)
+                                         (assoc opts :only (second args)))
       (= (first args) "--continue-on-fail")
                                   (recur (drop 1 args)
                                          (assoc opts :continue-on-fail true))
@@ -139,14 +142,23 @@
       (and (not (:continue-on-fail cli-opts))
            (pos? (:failed @state)))))
 
+(defn- only-filter
+  "When --only <substring> is set, keep only probes whose path
+   contains the substring. Used by the diff-test task to run only
+   the differential probes while skipping the T1..T11 battery."
+  [files]
+  (if-let [pat (:only cli-opts)]
+    (filterv #(str/includes? % pat) files)
+    files))
+
 (println)
-(println "[runner] regressions:" (count regression-files))
-(doseq [p regression-files]
+(println "[runner] regressions:" (count (only-filter regression-files)))
+(doseq [p (only-filter regression-files)]
   (when-not (stop-early?) (load-probe p)))
 
 (println)
-(println "[runner] script probes:" (count script-probes))
-(doseq [p script-probes]
+(println "[runner] script probes:" (count (only-filter script-probes)))
+(doseq [p (only-filter script-probes)]
   (when-not (stop-early?) (load-probe p)))
 
 (println)

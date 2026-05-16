@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.7.5 — Differential-Test Tasks + CI Wiring (Cycle Close)
+
+Last release of the differential-test cycle. Surfaces the diff
+machinery as standalone tasks and wires it into CI:
+
+* `mino.edn` registers two new tasks: `diff-test` (smoke, fixed
+  seed=0, diff probes only, ~1s) and `diff-test-soak` (soak, random
+  seed, 1000 random + 200/category, ~10s on the dev host, up to
+  60min budget in CI).
+* `runner.clj` gains a `--only <substring>` flag that filters
+  probes by path; `diff-test` uses `--only diff_` so the T1..T11
+  battery is skipped.
+* `.github/workflows/ci.yml` runs the diff smoke after the
+  Adversarial T1..T11 step with a 3-min wall-clock cap. On failure
+  the auto-captured regression files under `tests/adv/regressions/
+  diff-*` are uploaded as an `actions/upload-artifact@v4` artifact
+  for offline triage.
+* `.github/workflows/ci-nightly.yml` runs the diff soak with a
+  60-min wall-clock cap, random seed per run, same regression
+  artifact upload on failure.
+
+mino's `release-gate` already chains into mino-tests's runner via
+the v0.254.0 hook; the diff probes are part of that script-probes
+list so they run automatically without further mino-side wiring.
+
+Verified at cycle close:
+
+* `./mino/mino task diff-test` -> 6/6 probes green in ~860 ms.
+* `./mino/mino task diff-test-soak` (capped to 30s slice via
+  `--max-ms 30000`) -> 1805 program executions across 1 random
+  seed (42), 0 divergences, 0 regressions captured.
+* Full `tests/adv/runner.clj --seed 0 --mode smoke` -> 17/17
+  probes green in ~1010 ms.
+
 ## v0.7.4 — JIT-Specific Probes (`script/diff_jit_specific.clj`)
 
 Five JIT-behavior assertions the quad-byte-id runner can't make on

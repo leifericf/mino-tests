@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.2.3 — Migration In: Borderline E2E
+
+Fourth migration batch from mino v0.253.3. The five borderline
+tests land:
+
+  - `migrated/creative_test.clj` -- closure combo, script-style
+  - `migrated/doc_examples_test.clj` -- 427 lines of doc-matched
+    examples. A missing clojure.string :refer chain (for
+    starts-with? / ends-with? / includes?) is made explicit
+    here -- the original implicitly relied on a sibling test
+    file having pulled them in via :refer :all.
+  - `migrated/bc_jit_deopt_test.clj` -- cross-runtime JIT deopt
+  - `migrated/ns_parity_run.clj` -- multi-process parity runner
+  - `migrated/spawn_stress_regression.clj` -- spawn-fleet GC stress
+
+run_migrated.clj loads doc_examples / bc_jit_deopt /
+spawn_stress; creative_test runs as a script (no deftest) and
+ns_parity_run is its own runner -- both reachable directly.
+
+Migrated suite: 483 tests / 3397 assertions, all green.
+
 ## v0.2.2 — Migration In: C-Side Embed Harnesses
 
 Third migration batch from mino v0.253.2. The multi-state, STM,

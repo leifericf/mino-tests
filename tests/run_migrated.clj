@@ -33,6 +33,11 @@
 (require "tests/migrated/regression_hamt_str_churn")
 (require "tests/migrated/fault_inject_test")
 
+;; --- borderline E2E (migrated in v0.253.3) ---
+(require "tests/migrated/doc_examples_test")
+(require "tests/migrated/bc_jit_deopt_test")
+(require "tests/migrated/spawn_stress_regression")
+
 (reset! clojure.test/suite-mode false)
 
 (run-tests-and-exit)

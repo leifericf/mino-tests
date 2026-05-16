@@ -60,16 +60,20 @@
      :on   -- mino --jit=on
      :off  -- mino --jit=off
      :lean -- mino-lean (no --jit)
-   Returns a map keyed by variant -> stdout string.
-   The caller decides whether to assert byte-identity."
+   Returns a map keyed by variant -> {:exit N :out S} from sh.
+   The caller decides whether to assert byte-identity. Uses sh
+   (not sh!) so a non-zero child exit returns the captured stdout
+   instead of throwing -- error runs are part of the comparison."
   [mino-bin mino-lean-bin src-file]
-  {:auto (try (sh! mino-bin "--jit=auto" src-file) (catch e (str e)))
-   :on   (try (sh! mino-bin "--jit=on"   src-file) (catch e (str e)))
-   :off  (try (sh! mino-bin "--jit=off"  src-file) (catch e (str e)))
-   :lean (try (sh! mino-lean-bin          src-file) (catch e (str e)))})
+  (let [pick (fn [r] (select-keys r [:exit :out]))]
+    {:auto (pick (sh mino-bin "--jit=auto" src-file))
+     :on   (pick (sh mino-bin "--jit=on"   src-file))
+     :off  (pick (sh mino-bin "--jit=off"  src-file))
+     :lean (pick (sh mino-lean-bin          src-file))}))
 
 (defn quad-byte-identical?
-  "True iff all four variants produced byte-identical stdout."
+  "True iff all four variants produced identical {:exit :out} maps.
+   A divergence in either exit code or stdout flags the program."
   [quad]
   (let [{:keys [auto on off lean]} quad]
     (= auto on off lean)))

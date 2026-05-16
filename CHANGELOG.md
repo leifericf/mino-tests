@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.7.0 — Seeded mino Program Generator (`gen_program.clj`)
+
+First piece of the differential-test infrastructure. `gen_program.clj`
+emits seeded random pure mino programs and `edge_helpers/run-quad`
+now returns `{:exit :out}` per variant so a quad-byte-id check
+detects both stdout and exit-code divergences across
+auto / on / off / lean.
+
+Program shape: 1-3 (defn ...) followed by `(println EXPR)`. Bodies
+combine `let`, `loop`+`recur`, `if`, `when`, `or`+`when`, two-arity
+arithmetic (`+ - * quot rem mod bit-and`), comparisons, calls into
+previously-defined defns, and references to params / let-locals.
+
+Determinism constraints:
+
+* No I/O, no concurrency, no `rand` / `time` / `read-string`.
+* `quot`/`rem`/`mod` divisors are wrapped in `(if (zero? d) 1 (op a d))`
+  guards at generation time.
+* Loops use a literal bounded counter so they always terminate.
+* All four runtimes receive byte-identical source and (for valid
+  programs) must produce byte-identical `{:exit :out}` maps.
+
+Verified: 99/100 generated programs at seed 0 pass through
+`mino --jit=off` cleanly; the failing program surfaced a real
+BC-compile bug logged to mino's `.local/BUGS.md` (`if`+`else`
+fold-error in fn bodies). The bug fails uniformly across all four
+runtimes so it is not a quad divergence -- the differential
+machinery is unblocked.
+
 ## v0.6.1 — gen.clj Switches Back to xorshift64*
 
 mino v0.255.5 fixed the BC compiler's bitwise-fast-path bigint

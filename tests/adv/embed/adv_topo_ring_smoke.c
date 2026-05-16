@@ -27,12 +27,14 @@ static adv_verdict_t probe_ring_smoke(adv_probe_ctx_t *ctx) {
     int rc = adv_topo_post(&t, 0, 1, v);
     adv_require(ctx, rc == 0);
 
-    /* Step until quiescent or budget exhausted. */
+    /* Step until quiescent or budget exhausted. The ring has 3 nodes
+     * so a single 42 traveling makes one forward per step. We bound
+     * total laps so a runaway loop can't lock the harness. */
     int total = 0, steps = 0;
-    for (; steps < 12 && (steps == 0 || total < steps); steps++) {
+    for (; steps < 30; steps++) {
         int f = adv_topo_step(&t);
         total += f;
-        if (f == 0 && total > 0) break;
+        if (f == 0) break;
     }
     adv_json_emit_i(ctx, "steps", steps);
     adv_json_emit_i(ctx, "forwards", total);

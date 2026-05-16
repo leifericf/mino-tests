@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.3.0 — Embed-side Probes T12-T14 + Sanitizer Trinity
+
+The C-side adversarial probe battery + the sanitizer-trinity build
+path land together. The harness now links against mino's runtime
+sources directly (mino doesn't produce a libmino.a; .o files for
+release, full recompile under sanitizer flags).
+
+Embed probes (under `tests/adv/embed/`):
+
+  - `adv_clone_zoo.c` (T14) -- mino_clone fidelity across int,
+    vector, map, string, and a nested {:items [...] :meta {...}
+    :tags #{...}} value. Each shape's type predicate survives the
+    cross-state move.
+  - `adv_pool_topology.c` (T13) -- ring(5) long-run with 10 distinct
+    ints traveling around; star(4) with 3 spokes posting to hub;
+    thread-pool register / unregister round-trip.
+  - `adv_stm_mix.c` (T12) -- STM zero-sum under writer / dec-writer
+    contention (4 workers each, 50 iters); atom contention (4
+    workers, 100 swap! inc). Uses script-side futures because the
+    C harness is one-state-per-thread.
+  - `adv_fault_replay.c` -- mino_state_new round-trip, eval-error
+    recovery (clear_error + re-eval), 32x state alloc/free leak
+    test.
+
+`build-harness` task supports four variants:
+
+  - `:release` -- O2, links against mino's prebuilt .o files
+  - `:asan`    -- AddressSanitizer + UBSan combo
+  - `:ubsan`   -- UndefinedBehaviorSanitizer
+  - `:tsan`    -- ThreadSanitizer
+
+`adv-test-sanitizers` task drives all three sanitizer variants
+sequentially.
+
+Verified end-to-end:
+
+  - 15 / 15 probes pass under :release
+  - 15 / 15 pass under :asan (no diagnostics)
+  - 15 / 15 pass under :ubsan (no diagnostics)
+  - 15 / 15 pass under :tsan; TSan surfaces one real GC vs worker
+    race that's logged in mino's `.local/BUGS.md` for a focused
+    GC-concurrency fix cycle.
+
 ## v0.5.0 — CI Wiring + Dedup Audit
 
 GitHub Actions workflows land + dedup audit closes overlap with

@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.7.4 — JIT-Specific Probes (`script/diff_jit_specific.clj`)
+
+Five JIT-behavior assertions the quad-byte-id runner can't make on
+its own (those compare independent processes; these probe
+within-process state):
+
+* **Warmup parity** -- a fn computed cold matches the same fn
+  computed warm (5000 iterations). A JIT miscompile flips bits.
+* **Deopt after redef** -- a fn heated past the JIT threshold,
+  then redefined, must dispatch to the new body. Pins the
+  `native_gen` / `S->ic_gen` invariant.
+* **IC invalidation on global var redef** -- a fn closing over a
+  global var, heated past the threshold, must see the new value
+  after the var is redefined.
+* **Mode-switch byte-id** -- the same fib/fact/reduce shape under
+  --jit=off, --jit=on, and --jit=auto produces byte-identical
+  stdout.
+* **Protocol dispatch stability** -- a heated protocol-method site
+  must dispatch correctly when the protocol is later extended to
+  a new type.
+
+Verified: all 5 probes green at seed 0; total smoke run climbs from
+~1015 ms to ~1010 ms (the JIT probes complete in ~3 ms). 17/17
+probes pass.
+
 ## v0.7.3 — Targeted Category Generators (BC Closure / Arith / Coll / Ctrl)
 
 Four template-driven generators surface BC compile-path divergences

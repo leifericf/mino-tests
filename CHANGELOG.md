@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7.6 — Submodule Bump to mino v0.255.6
+
+mino v0.255.6 fixed the BC compile-path try_depth bug that
+gen_program surfaced during Cycle Phase 1. With the fix landed,
+the submodule pin moves forward so CI runs against the corrected
+runtime.
+
+Verified: 17/17 probes green at seed 0 in ~1003 ms against the new
+pin.
+
 ## v0.7.5 — Differential-Test Tasks + CI Wiring (Cycle Close)
 
 Last release of the differential-test cycle. Surfaces the diff

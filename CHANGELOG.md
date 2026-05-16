@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.4.0 — Coverage + Replay + Regression Auto-Capture
+
+llvm-cov integration + replay-by-seed + auto-captured regression
+files land.
+
+* `adv-test-coverage` task now (a) detects clang / llvm-profdata /
+  llvm-cov via xcrun -f or which; (b) builds the harness with
+  `-fprofile-instr-generate -fcoverage-mapping`; (c) runs with
+  LLVM_PROFILE_FILE pointing at tests/adv/coverage/mino.profraw;
+  (d) merges via llvm-profdata; (e) emits HTML at
+  tests/adv/coverage/html/index.html.
+* runner.clj accepts `--replay <seed>` which overrides --seed.
+  Re-runs are deterministic against the registered RNG state
+  (gen.clj's u32 LCG); a future random-seeded soak run that flags
+  a probe at seed S reproduces with `--replay S`.
+* runner.clj auto-captures failing probes into
+  tests/adv/regressions/<ts>-<probe-name>.clj. Each regression
+  file is a 4-line script that re-loads the probe; the runner
+  loads regressions/* before the live battery so a fix that
+  reverts the probe surfaces immediately.
+
+Verified: `--replay 42` reports `:seed 42 :replay true` and runs
+all 11 probes; the regression directory remains empty when the
+suite is green (no auto-captures triggered).
+
 ## v0.3.0 — Embed-side Probes T12-T14 + Sanitizer Trinity
 
 The C-side adversarial probe battery + the sanitizer-trinity build

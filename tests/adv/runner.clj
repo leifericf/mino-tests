@@ -15,24 +15,35 @@
 (load-file "tests/adv/edge_helpers.clj")
 (load-file "tests/adv/gen.clj")
 (load-file "tests/adv/invariants.clj")
+(require '[clojure.string :as str])
 
 ;; --- arg parsing ---
 
 (defn- parse-args [args]
-  (loop [args (vec args), opts {:mode "smoke" :seed 0}]
+  (loop [args (vec args), opts {:mode "smoke" :seed 0 :replay nil}]
     (cond
-      (empty? args)             opts
-      (= (first args) "--seed") (recur (drop 2 args)
-                                       (assoc opts :seed
-                                              (parse-long (second args))))
-      (= (first args) "--mode") (recur (drop 2 args)
-                                       (assoc opts :mode (second args)))
-      :else                     (recur (rest args) opts))))
+      (empty? args)               opts
+      (= (first args) "--seed")   (recur (drop 2 args)
+                                         (assoc opts :seed
+                                                (parse-long (second args))))
+      (= (first args) "--mode")   (recur (drop 2 args)
+                                         (assoc opts :mode (second args)))
+      (= (first args) "--replay") (recur (drop 2 args)
+                                         (assoc opts :replay
+                                                (parse-long (second args))))
+      :else                       (recur (rest args) opts))))
 
 (def cli-opts (parse-args *command-line-args*))
 
-(println "[runner] mode=" (:mode cli-opts) " seed=" (:seed cli-opts))
-(seed! (:seed cli-opts))
+;; --replay <seed> overrides --seed for deterministic re-execution.
+;; Useful when a soak run flagged a probe at a specific seed -- pass
+;; that seed back via --replay to reproduce.
+(def effective-seed (or (:replay cli-opts) (:seed cli-opts)))
+
+(println "[runner] mode=" (:mode cli-opts)
+         " seed=" effective-seed
+         (if (:replay cli-opts) " (replay)" ""))
+(seed! effective-seed)
 
 ;; --- probe discovery via an explicit list ---
 ;;
@@ -65,6 +76,29 @@
 
 (def state (atom {:total 0 :passed 0 :failed 0 :errors []}))
 
+(defn- auto-capture-failure
+  "Write a regression file under tests/adv/regressions/ that
+   reproduces the failing probe at the captured seed. The file is a
+   minimal mino script that runs the probe -- not the input that
+   produced the failure -- because regressions in this codebase live
+   at the probe-script granularity."
+  [probe-file seed error-str]
+  (let [name (last (str/split probe-file "/"))
+        ts   (time-ms)
+        rfile (str "tests/adv/regressions/" ts "-"
+                   (subs name 0 (max 0 (- (count name) 4))) ".clj")]
+    (try
+      (spit rfile
+            (str ";; Auto-captured regression at " ts ".\n"
+                 ";; Reproduces the failure observed running\n"
+                 ";; " probe-file " at seed " seed ".\n"
+                 ";; Error: " error-str "\n;;\n"
+                 ";; Usage: ./mino tests/adv/runner.clj --replay "
+                 seed "\n"
+                 "(load-file \"" probe-file "\")\n"))
+      (println "  auto-captured regression at:" rfile)
+      (catch e nil))))
+
 (defn- load-probe [path]
   (println "  loading:" path)
   (try
@@ -72,6 +106,7 @@
     (swap! state update :passed inc)
     (catch e
       (println "  ERROR in" path ":" (str e))
+      (auto-capture-failure path effective-seed (str e))
       (swap! state #(-> %
                         (update :failed inc)
                         (update :errors conj
@@ -92,7 +127,8 @@
   (println (pr-str {:total  (:total s)
                     :passed (:passed s)
                     :failed (:failed s)
-                    :seed   (:seed cli-opts)
-                    :mode   (:mode cli-opts)})))
+                    :seed   effective-seed
+                    :mode   (:mode cli-opts)
+                    :replay (boolean (:replay cli-opts))})))
 
 (exit (if (zero? (:failed @state)) 0 1))

@@ -193,35 +193,83 @@
         (println "  (run `cd " mino-root " && make` first)")
         1))))
 
+(defn- detect-tool
+  "Resolve a clang tool. On macOS prefers xcrun -f; otherwise falls
+   back to a plain `which` lookup. Returns the absolute path or nil."
+  [name]
+  (let [via-xcrun (try (sh! "xcrun" "-f" name) (catch _ nil))
+        via-which (try (sh! "which" name) (catch _ nil))]
+    (or (when via-xcrun (str/trim via-xcrun))
+        (when via-which (str/trim via-which)))))
+
 (defn cov-run
-  "Build mino_cov + run suite + emit llvm-cov html. Clang-only.
-   The harness body lands in Cycle C v0.4.0; this stub detects
-   clang/llvm-cov and reports the gap if either is missing."
+  "Build the harness with llvm-cov instrumentation, run it, merge
+   the profile data, and emit an HTML report. Clang-only; a clean
+   error message lands if any LLVM tool is missing."
   []
-  (let [clang-out (try (sh! "which" "clang") (catch _ ""))
-        prof-out  (try (sh! "which" "llvm-profdata") (catch _ ""))
-        cov-out   (try (sh! "which" "llvm-cov") (catch _ ""))]
+  (let [root      (repo-root)
+        clang     (detect-tool "clang")
+        profdata  (detect-tool "llvm-profdata")
+        cov       (detect-tool "llvm-cov")
+        mino-root (mino-src-root)
+        out-dir   (str root "/tests/adv/coverage")]
     (cond
-      (str/blank? clang-out)
+      (nil? clang)
       (do (println "  ERROR: clang not found; coverage requires clang")
-          (println "         (install Xcode / clang-19 / etc.)")
           1)
 
-      (str/blank? prof-out)
+      (nil? profdata)
       (do (println "  ERROR: llvm-profdata not found; install LLVM tools")
           1)
 
-      (str/blank? cov-out)
+      (nil? cov)
       (do (println "  ERROR: llvm-cov not found; install LLVM tools")
           1)
 
       :else
-      (do (println "  clang:        " (str/trim clang-out))
-          (println "  llvm-profdata:" (str/trim prof-out))
-          (println "  llvm-cov:     " (str/trim cov-out))
-          (println "  TODO: build mino_cov, run suite, merge profraw, emit html")
-          (println "  (full coverage binding lands in mino-tests v0.4.0)")
-          0))))
+      (do
+        (println "  clang:        " clang)
+        (println "  llvm-profdata:" profdata)
+        (println "  llvm-cov:     " cov)
+        (sh! "mkdir" "-p" out-dir)
+
+        (let [;; build with CC=clang for the instrumentation
+              cc-env (getenv "CC")
+              _      (println "  building :cov variant...")
+              ;; build-harness reads CC env; set it via shell-out
+              build-result (try
+                             (sh! "env" (str "CC=" clang)
+                                  (str (getenv "PWD") "/mino/mino")
+                                  "-e"
+                                  (str "(do (load-file \"lib/mino_tests/tasks/impl.clj\") "
+                                       "(in-ns (quote mino-tests.tasks.impl)) "
+                                       "(build-harness :cov))"))
+                             (catch e (str "build-error: " e)))]
+          (println "  build:" build-result)
+
+          (let [bin     (str out-dir "/../build/adv_test_cov")
+                profraw (str out-dir "/mino.profraw")
+                merged  (str out-dir "/mino.profdata")
+                report  (str out-dir "/report.html")]
+            (if-not (file-exists? bin)
+              (do (println "  ERROR: cov binary not built:" bin) 1)
+              (do
+                (println "  running cov harness...")
+                (try (sh! "env" (str "LLVM_PROFILE_FILE=" profraw) bin)
+                     (catch e (println "    (some probes may fail under cov)")))
+
+                (println "  merging profdata...")
+                (sh! profdata "merge" "-sparse"
+                     "-o" merged profraw)
+
+                (println "  generating html report...")
+                (sh! cov "show" bin
+                     (str "-instr-profile=" merged)
+                     "-format=html"
+                     "-output-dir=" (str out-dir "/html"))
+
+                (println "  report at:" (str out-dir "/html/index.html"))
+                0))))))))
 
 (defn sanitizer-trinity
   "Run the C-side battery under three sanitizer recipes. Each variant

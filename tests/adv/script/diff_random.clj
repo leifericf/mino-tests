@@ -18,6 +18,7 @@
 (load-file "tests/adv/edge_helpers.clj")
 (load-file "tests/adv/gen.clj")
 (load-file "tests/adv/gen_program.clj")
+(load-file "tests/adv/shrink.clj")
 (require '[clojure.string :as s])
 
 (def mino-bin (or (getenv "MINO_BIN") "mino/mino"))
@@ -48,10 +49,18 @@
   "Write a regression file that reproduces this exact divergence.
    The file is a mino script: re-running it via the runner replays
    the same program against the same four binaries and asserts the
-   same byte-id check. Captured fields: program source, seed,
-   per-variant {:exit :out}."
+   same byte-id check.
+
+   On divergence we also attempt to shrink the program to a minimal
+   witness via shrink-divergent; the regression embeds the shrunken
+   form (or the original if the shrinker timed out). The shrinker's
+   budget is bounded so the smoke run stays within its overall budget."
   [seed i program quad]
-  (let [rfile (regression-path seed i)]
+  (let [rfile (regression-path seed i)
+        shrunk (try
+                 (shrink-divergent mino-bin lean-bin program
+                                   {:budget-ms 15000})
+                 (catch e (println "  [shrink] error:" (str e)) program))]
     (try
       (spit rfile
             (str ";; Auto-captured quad-divergence at " (now-ms) ".\n"
@@ -65,14 +74,15 @@
                  ";; :off  " (pr-str (:off quad)) "\n"
                  ";; :lean " (pr-str (:lean quad)) "\n"
                  ";;\n"
-                 ";; Original program:\n"
-                 (apply str (map #(str ";; " % "\n") (s/split-lines program)))
+                 ";; Shrunken witness (from " (count program) " to "
+                 (count shrunk) " chars):\n"
+                 (apply str (map #(str ";; " % "\n") (s/split-lines shrunk)))
                  ";;\n"
                  ";; Re-run the program through the quad and assert byte-id\n"
                  ";; matches what was captured above.\n"
                  "(load-file \"tests/adv/edge_helpers.clj\")\n"
                  "(let [tmp \"/tmp/diff-random-replay.clj\"]\n"
-                 "  (spit tmp " (pr-str program) ")\n"
+                 "  (spit tmp " (pr-str shrunk) ")\n"
                  "  (let [q (run-quad (or (getenv \"MINO_BIN\") \"mino/mino\")\n"
                  "                     (or (getenv \"MINO_LEAN_BIN\") \"mino/mino-lean\")\n"
                  "                     tmp)]\n"

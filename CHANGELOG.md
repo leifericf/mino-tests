@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.7.2 — Witness Shrinker (`shrink.clj`)
+
+When `diff_random` finds a quad divergence, the captured regression
+now embeds a minimal witness rather than the full random program.
+`shrink-divergent` runs delta-debugging-shaped form-removal followed
+by a small library of textual simplifications; the final printing
+form is always preserved so the program still has stdout to compare
+against.
+
+Wall-clock budget: 15s per divergence inside `diff_random` (so a
+single bug doesn't blow the smoke budget); the standalone helper
+defaults to 30s.
+
+Verified:
+
+* Non-diverging input -- shrinker returns the original unchanged.
+* Synthetic divergence (a program "diverges" iff source contains
+  a sentinel substring) -- shrinker drops 2 of 4 defns and keeps
+  the form carrying the sentinel plus the final `(println ...)`.
+
 ## v0.7.1 — Differential Quad Runner (`script/diff_random.clj`)
 
 Generated programs from v0.7.0 are now walked through the four

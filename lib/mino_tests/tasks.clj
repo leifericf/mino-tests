@@ -91,3 +91,7 @@
 (defn asan-per-file [& _]
   (println "[mino-tests] asan-per-file (mino tests/ files, one ASan subprocess each)")
   (impl/asan-per-file))
+
+(defn clojuredocs-refresh [& _]
+  (println "[mino-tests] clojuredocs-refresh (re-download corpus, re-run bb ground truth)")
+  (impl/clojuredocs-refresh))

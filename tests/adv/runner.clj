@@ -87,7 +87,8 @@
    "tests/adv/script/diff_bc_arith_shapes.clj"
    "tests/adv/script/diff_bc_collection_shapes.clj"
    "tests/adv/script/diff_bc_control_shapes.clj"
-   "tests/adv/script/diff_jit_specific.clj"])
+   "tests/adv/script/diff_jit_specific.clj"
+   "tests/adv/script/diff_clojuredocs.clj"])
 
 ;; --- driver ---
 

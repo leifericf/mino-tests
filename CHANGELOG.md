@@ -1,5 +1,46 @@
 # Changelog
 
+## v0.9.0 — ClojureDocs Differential Probe
+
+New differential test probe at `tests/adv/script/diff_clojuredocs.clj`.
+The probe runs ~1100 user-written examples from clojuredocs.org through
+mino and asserts byte-identical printed output against a `bb` ground
+truth recorded at fixture-build time.
+
+Where the existing `diff_random` probe covers the syntactic interior
+of the language via generated programs, this probe covers the semantic
+cookbook surface a Clojure user reaches for on day one: `map`, `filter`,
+`reduce`, `into`, `update-in`, `merge-with`, the `clojure.string`
+helpers, `clojure.set` operations, and the like. A divergence here is
+a divergence a new user hits immediately.
+
+The corpus is vendored as a 384 KB EDN fixture under
+`tests/adv/fixtures/clojuredocs-tuples.edn`. The raw 3.6 MB JSON
+export is fetched on demand by `./mino/mino task clojuredocs-refresh`
+and gitignored — the fixture lives in git, the source dump doesn't.
+Refresh needs `bb` on PATH; the probe itself doesn't.
+
+Ground truth is bb's actual printed output rather than the documented
+`;;=>` strings on clojuredocs.org. The documented strings can lag the
+Clojure version, drop outer quotes on string values, or contain
+straight typos; bb's `pr-str` matches what a user pasting the example
+into the JVM REPL sees today.
+
+A `tests/adv/fixtures/clojuredocs_allowlist.edn` file marks examples
+whose mino output differs by design — the Java unchecked-arithmetic
+family, host-mutable array primitives, JVM-specific hash combinators,
+non-deterministic fns. Both per-example (`ns/var:idx`) and per-var
+(`ns/var`) keys are accepted; the per-var form covers the common case
+where every example of a var is expected to diverge.
+
+Nightly CI picks the probe up automatically through `diff-test-soak`'s
+existing `--only diff_` filter; no workflow change needed.
+
+The first soak surfaced a punch list of real stdlib gaps in mino
+(regex args to `clojure.string/{replace, split}`, nil-tolerance in
+`clojure.set` ops, `mapv` multi-collection arity, `clojure.math`
+namespace) — those get their own follow-up release cycle.
+
 ## v0.8.3 — Strip JIT-Disabled Warning from Quad-Byte-ID Compare
 
 `run-quad` (`tests/adv/edge_helpers.clj`) and

@@ -44,4 +44,6 @@
   gc-verify         {:doc  "MINO_GC_VERIFY=1 on mino tests/run.clj (allowed-to-fail)"
                      :task mino-tests.tasks/gc-verify}
   asan-per-file     {:doc  "One ASan subprocess per mino test file -- defeats full-suite Heisenbugs"
-                     :task mino-tests.tasks/asan-per-file}}}
+                     :task mino-tests.tasks/asan-per-file}
+  clojuredocs-refresh {:doc "Re-fetch ClojureDocs export and rebuild the diff-probe fixture (needs bb)"
+                       :task mino-tests.tasks/clojuredocs-refresh}}}

@@ -63,6 +63,7 @@ runner.
 | `adv-test-sanitizers` | Triple sanitizer pass (ASan + UBSan + TSan). |
 | `build-cov` | Build `mino_cov` instrumented binary. |
 | `bump-mino` | Move the `mino` submodule to a newer tag and lock it. |
+| `clojuredocs-refresh` | Re-download the ClojureDocs example export and rebuild the diff-probe fixture. Dev-host only; needs `bb` on PATH. |
 
 ## Boundary principle
 
@@ -86,3 +87,30 @@ adversarial whitebox probe ............. mino-tests/
 - No bash scripts in this repo — tooling lives in `lib/mino_tests/tasks.clj`
   as mino tasks. Configuration (Dockerfiles, workflow YAML) is allowed.
 - No plan / status / BUGS files in git — those live in `.local/`.
+
+## ClojureDocs differential probe
+
+`tests/adv/script/diff_clojuredocs.clj` runs user-written examples
+from clojuredocs.org through mino and asserts byte-identical printed
+output against a recorded ground truth.
+
+Ground truth is captured at fixture-build time (`clojuredocs-refresh`
+task) by spawning `bb` against each example: the documented `;;=>`
+strings on clojuredocs.org are noisy (stale, dropped string quotes,
+Clojure version skew), but bb's actual printed output is what a user
+pasting the snippet into the JVM REPL sees today. mino has to match.
+
+The fixture lives at `tests/adv/fixtures/clojuredocs-tuples.edn`
+(~360 KB, ~1100 examples covering `clojure.core`, `clojure.string`,
+`clojure.set`, `clojure.walk`, `clojure.zip`, `clojure.template`,
+`clojure.edn`, and `clojure.spec.alpha`). Examples that exercise
+Java interop, side effects, REPL state, or async are pre-triaged
+and never reach the probe.
+
+`tests/adv/fixtures/clojuredocs_allowlist.edn` keys intentional
+divergences (named `unchecked-*` opt-ins, mino design choices that
+won't match JVM semantics). Allowlisted misses are skip, not fail.
+
+The probe is automatically included in `diff-test` / `diff-test-soak`
+since its filename matches the `diff_` filter; nightly CI runs the
+soak form via `diff-test-soak` without any extra wiring.

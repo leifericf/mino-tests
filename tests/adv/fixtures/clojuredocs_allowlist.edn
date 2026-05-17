@@ -1,0 +1,124 @@
+;; Allowlist of ClojureDocs examples whose mino output INTENTIONALLY
+;; differs from bb / JVM Clojure. The probe loads this file and
+;; treats matched examples as "skip" (not "fail").
+;;
+;; Two key shapes are supported:
+;;   "clojure.ns/var-name"         -- skip every example of this var
+;;   "clojure.ns/var-name:<idx>"   -- skip just example #idx
+;; The probe checks the exact-index key first, then falls back to the
+;; var-wildcard. The value is a short reason string used in verdict
+;; output; longer rationale lives next to the relevant CHANGELOG entry.
+;;
+;; Add entries here only for divergences mino keeps on purpose.
+;; A divergence that's "just a bug" should land in mino/.local/BUGS.md
+;; and get fixed; the allowlist isn't a place to silence open issues.
+
+{;; --- Java-style unchecked arithmetic ---
+ ;;
+ ;; mino is alpha and pre-1.0. The unchecked-* family doesn't have a
+ ;; matching primitive in mino's number tower yet (per the WWLD memory:
+ ;; named opt-in, not silent divergence). When mino does ship them they
+ ;; will go through `unchecked-*` opt-ins, but the JVM semantics --
+ ;; wrap-on-overflow for `int`, narrowing casts for `byte`/`short` --
+ ;; are not stable contracts on a runtime where numbers are tagged.
+ "clojure.core/unchecked-int"          "unchecked-* not in mino yet"
+ "clojure.core/unchecked-long"         "unchecked-* not in mino yet"
+ "clojure.core/unchecked-byte"         "unchecked-* not in mino yet"
+ "clojure.core/unchecked-short"        "unchecked-* not in mino yet"
+ "clojure.core/unchecked-float"        "unchecked-* not in mino yet"
+ "clojure.core/unchecked-double"       "unchecked-* not in mino yet"
+ "clojure.core/unchecked-char"         "unchecked-* not in mino yet"
+ "clojure.core/unchecked-add"          "unchecked-* not in mino yet"
+ "clojure.core/unchecked-add-int"      "unchecked-* not in mino yet"
+ "clojure.core/unchecked-subtract"     "unchecked-* not in mino yet"
+ "clojure.core/unchecked-subtract-int" "unchecked-* not in mino yet"
+ "clojure.core/unchecked-multiply"     "unchecked-* not in mino yet"
+ "clojure.core/unchecked-multiply-int" "unchecked-* not in mino yet"
+ "clojure.core/unchecked-divide-int"   "unchecked-* not in mino yet"
+ "clojure.core/unchecked-inc"          "unchecked-* not in mino yet"
+ "clojure.core/unchecked-inc-int"      "unchecked-* not in mino yet"
+ "clojure.core/unchecked-dec"          "unchecked-* not in mino yet"
+ "clojure.core/unchecked-dec-int"      "unchecked-* not in mino yet"
+ "clojure.core/unchecked-negate"       "unchecked-* not in mino yet"
+ "clojure.core/unchecked-negate-int"   "unchecked-* not in mino yet"
+ "clojure.core/unchecked-remainder-int" "unchecked-* not in mino yet"
+
+ ;; --- Java arrays ---
+ ;;
+ ;; mino doesn't have host-mutable primitive arrays. The constructors,
+ ;; mutators, and reflection-style accessors all return JVM-specific
+ ;; #object[...] strings under bb -- nothing we can match.
+ "clojure.core/int-array"        "host-mutable arrays not in mino"
+ "clojure.core/long-array"       "host-mutable arrays not in mino"
+ "clojure.core/short-array"      "host-mutable arrays not in mino"
+ "clojure.core/byte-array"       "host-mutable arrays not in mino"
+ "clojure.core/double-array"     "host-mutable arrays not in mino"
+ "clojure.core/float-array"      "host-mutable arrays not in mino"
+ "clojure.core/char-array"       "host-mutable arrays not in mino"
+ "clojure.core/boolean-array"    "host-mutable arrays not in mino"
+ "clojure.core/object-array"     "host-mutable arrays not in mino"
+ "clojure.core/make-array"       "host-mutable arrays not in mino"
+ "clojure.core/to-array"         "host-mutable arrays not in mino"
+ "clojure.core/to-array-2d"      "host-mutable arrays not in mino"
+ "clojure.core/into-array"       "host-mutable arrays not in mino"
+ "clojure.core/aset"             "host-mutable arrays not in mino"
+ "clojure.core/aset-int"         "host-mutable arrays not in mino"
+ "clojure.core/aset-long"        "host-mutable arrays not in mino"
+ "clojure.core/aset-char"        "host-mutable arrays not in mino"
+ "clojure.core/aget"             "host-mutable arrays not in mino"
+ "clojure.core/alength"          "host-mutable arrays not in mino"
+ "clojure.core/aclone"           "host-mutable arrays not in mino"
+ "clojure.core/amap"             "host-mutable arrays not in mino"
+ "clojure.core/areduce"          "host-mutable arrays not in mino"
+ "clojure.core/ints"             "host-mutable arrays not in mino"
+ "clojure.core/longs"            "host-mutable arrays not in mino"
+ "clojure.core/shorts"           "host-mutable arrays not in mino"
+ "clojure.core/bytes"            "host-mutable arrays not in mino"
+ "clojure.core/doubles"          "host-mutable arrays not in mino"
+ "clojure.core/floats"           "host-mutable arrays not in mino"
+ "clojure.core/chars"            "host-mutable arrays not in mino"
+ "clojure.core/booleans"         "host-mutable arrays not in mino"
+
+ ;; --- Hash function internals ---
+ ;;
+ ;; hash-ordered-coll and hash-unordered-coll are the JVM Clojure
+ ;; equality-aware hash combinators. mino has its own hash impl that
+ ;; satisfies the documented invariants (= => same hash) but does
+ ;; not reproduce the exact int values JVM produces.
+ "clojure.core/hash-ordered-coll"   "hash impl differs by design"
+ "clojure.core/hash-unordered-coll" "hash impl differs by design"
+ "clojure.core/hash"                "hash impl differs by design"
+
+ ;; --- Non-deterministic fns ---
+ ;;
+ ;; By definition these can never byte-match across runtimes.
+ "clojure.core/shuffle"        "non-deterministic by design"
+ "clojure.core/random-sample"  "non-deterministic by design"
+ "clojure.core/rand"           "non-deterministic by design"
+ "clojure.core/rand-int"       "non-deterministic by design"
+ "clojure.core/rand-nth"       "non-deterministic by design"
+
+ ;; --- Java tag predicates ---
+ ;;
+ ;; These predicates depend on Java's class system or its specific
+ ;; reflection-based instance checks. Mino's type model is different.
+ "clojure.core/inst?"          "Java inst? semantics"
+ "clojure.core/inst-ms"        "Java inst? semantics"
+ "clojure.core/uuid?"          "Java UUID class check"
+ "clojure.core/bytes?"         "Java byte[] class check"
+ "clojure.core/class"          "Java class introspection"
+ "clojure.core/type"           "Java class introspection"
+
+ ;; --- Hash / set print ordering ---
+ ;;
+ ;; Mino and JVM Clojure both print hash-sets/maps in implementation
+ ;; iteration order, which is unspecified. Examples that print a
+ ;; multi-element set diverge harmlessly on tiny inputs.
+ "clojure.core/hash-set"       "set print order is impl-defined"
+
+ ;; --- ClojureDocs ratio-print examples ---
+ ;;
+ ;; bb prints ratios as `1/2`, JVM Clojure prints `1/2`, mino with
+ ;; ratios prints `1/2`, but bigint/bigdec affixes (N, M) differ;
+ ;; the relevant filter is in the build script triage.
+}

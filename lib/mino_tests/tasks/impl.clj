@@ -520,3 +520,22 @@
         (println "    FAIL" (:file f))
         (println "      " (clojure.string/trim (:out f)))))
     (if (empty? failed) 0 1)))
+
+;; ---- ClojureDocs corpus refresh ----
+
+(defn clojuredocs-refresh
+  "Re-download the ClojureDocs example export, parse it, and re-run
+   each surviving tuple through bb to record fresh ground truth.
+   The result overwrites tests/adv/fixtures/clojuredocs-tuples.edn.
+
+   Dev-host only -- needs bb on PATH and network access. The CI
+   nightly run reads the vendored EDN and never refreshes."
+  []
+  (let [script (str (repo-root) "/tests/adv/clojuredocs_build.clj")]
+    (println "  exec: bb" script)
+    (try
+      (println (sh! "bb" script))
+      0
+      (catch e
+        (println "  clojuredocs-refresh failed:" (str e))
+        1))))

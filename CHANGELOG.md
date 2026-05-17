@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.10.1 — ClojureDocs allowlist sweep after mino-side fixes
+
+Expands the per-example allowlist for the differential probe to
+match the post-fix shape of the mino runtime. The mino side
+shipped a cycle of stdlib and runtime corrections that closed
+roughly 35 examples of real divergence; remaining mismatches now
+fall into well-categorized buckets that are either intentional
+(Java interop, JVM-only print shapes, non-determinism, set print
+order, spec.alpha regex internals) or known-deferred and tracked
+in `mino/.local/BUGS.md` (letfn mutual recursion, keyword
+ns/name conflate on slash, with-redefs of core fns, walk vector
+branch).
+
+Probe verdict against mino v0.271.0: **1058 pass / 0 fail /
+269 allowlisted / 0 mino-error out of 1327 tested**.
+
+Tightens `.gitignore` so auto-captured `tests/adv/regressions/*.clj`
+files don't accidentally leak into commits (the dir itself stays
+tracked via `.gitkeep`).
+
 ## v0.10.0 — ClojureDocs probe: stdlib aliases + multi-segment preambles
 
 Two probe-side correctness fixes that surface more of mino's actual

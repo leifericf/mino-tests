@@ -27,3 +27,7 @@ tests/adv/fixtures/clojuredocs-export.json
 *.tsan.log
 *.ubsan.log
 mino-dev
+
+# Auto-captured regressions from probe runs (the dir itself stays
+# tracked via .gitkeep so the probe has a place to write)
+tests/adv/regressions/*.clj

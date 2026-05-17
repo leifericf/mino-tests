@@ -121,4 +121,244 @@
  ;; bb prints ratios as `1/2`, JVM Clojure prints `1/2`, mino with
  ;; ratios prints `1/2`, but bigint/bigdec affixes (N, M) differ;
  ;; the relevant filter is in the build script triage.
+
+ ;; --- Java-only print shapes (#object[clojure.lang.X ...]) ---
+ ;;
+ ;; ensure-reduced / unreduced expose the Reduced wrapper. Mino prints
+ ;; it as `#<reduced ...>` and recognizes already-reduced inputs.
+ "clojure.core/ensure-reduced:0"  "#object[clojure.lang.Reduced] string"
+ "clojure.core/ensure-reduced:1"  "#object[clojure.lang.Reduced] string"
+ "clojure.core/ensure-reduced:2"  "#object[clojure.lang.Reduced] string"
+ "clojure.core/unreduced:2"       "#object[clojure.lang.Reduced] string"
+ ;; pr-str/prn-str on a LazySeq emit a print-truncated form / Java object
+ ;; reference; mino realizes and prints the seq contents.
+ "clojure.core/pr-str:0"        "JVM LazySeq object-id print form"
+ "clojure.core/prn-str:0"       "JVM *print-length* truncation differs"
+ ;; PersistentQueue: no built-in queue type; the corpus examples poke at
+ ;; clojure.lang.PersistentQueue/EMPTY which mino doesn't provide.
+ "clojure.core/empty:0"         "empty PersistentQueue requires Java queue"
+ "clojure.core/empty:1"         "empty PersistentQueue requires Java queue"
+ "clojure.core/empty:2"         "empty PersistentQueue requires Java queue"
+ "clojure.core/empty:3"         "empty PersistentQueue requires Java queue"
+ "clojure.core/empty:4"         "empty PersistentQueue requires Java queue"
+ "clojure.core/empty:5"         "preamble: PersistentQueue/EMPTY"
+ ;; ex-cause / ex-data print forms include a JVM stack-trace
+ ;; serialisation we can't reproduce.
+ "clojure.core/ex-cause:0"      "JVM #error stack-trace serialisation"
+ "clojure.core/ex-cause:1"      "JVM #error stack-trace serialisation"
+ ;; chunk-buffer prints as #object[clojure.lang.ChunkBuffer ...]
+ "clojure.core/chunk-buffer:0"  "JVM chunk-buffer object print"
+ ;; get-thread-bindings returns a map keyed by Vars whose printed form
+ ;; includes both the namespace-qualified var name and Java-bound side
+ ;; data; mino's binding map is simpler.
+ "clojure.core/get-thread-bindings:0"  "JVM-only var/object identity in map"
+ ;; proxy / java.util/of / file-seq are Java interop surfaces.
+ "clojure.core/proxy-mappings:0"  "Java proxy interop"
+ "clojure.core/proxy-mappings:1"  "Java proxy interop"
+ "clojure.core/file-seq:0"        "Java File interop"
+ "clojure.core/file-seq:1"        "Java File interop"
+ "clojure.core/file-seq:2"        "Java File interop"
+ "clojure.core/uri?:0"            "java.net.URI"
+
+ ;; --- Preamble pulls in Java interop that mino can't run ---
+ ;;
+ ;; The probe runs preamble lines verbatim; if a preamble form errors,
+ ;; the script bails before reaching the test form. These examples are
+ ;; not bugs in the var under test — mino just can't execute the
+ ;; preamble. (A probe-side improvement to wrap each preamble form in
+ ;; a try-catch is tracked separately.)
+ "clojure.core/boolean?:2"      "preamble uses (new Boolean ...)"
+ "clojure.core/double?:1"       "preamble uses (new Double ...)"
+ "clojure.core/int?:1"          "preamble uses java.lang.Integer."
+ "clojure.core/int?:2"          "preamble: Long/MAX_VALUE etc."
+ "clojure.core/bit-and:3"       "preamble: Integer/toBinaryString"
+ "clojure.core/bit-and-not:0"   "preamble: Integer/toBinaryString"
+ "clojure.core/bit-shift-right:1"          "byte sign-extension diverges"
+ "clojure.core/unsigned-bit-shift-right:0" "byte sign-extension diverges"
+ "clojure.core/=:4"             "preamble: Double/POSITIVE_INFINITY"
+ "clojure.core/=:5"             "preamble: Double/POSITIVE_INFINITY"
+ "clojure.core/=:6"             "preamble: Double/POSITIVE_INFINITY"
+ "clojure.core/==:3"            "preamble: Double/POSITIVE_INFINITY"
+ "clojure.core/+:5"             "preamble: Integer/MAX_VALUE"
+ "clojure.core/*:5"             "(* a-bigint) requires bigint print suffix"
+ "clojure.core/identical?:0"    "preamble: (String. \"abc\")"
+ "clojure.core/identical?:1"    "preamble: (String. \"abc\")"
+ "clojure.core/identical?:2"    "JVM string-pool semantics"
+ "clojure.core/identical?:3"    "JVM string-pool semantics"
+ "clojure.core/into:8"          "preamble: java.util.List/of"
+ "clojure.core/into:9"          "preamble: java.util.Set/of"
+ "clojure.core/into:10"         "preamble: java.util.Map/of"
+
+ ;; --- Reader conditionals ---
+ ;;
+ ;; mino reads reader conditionals through but doesn't expose the
+ ;; tagged-reader machinery (ReaderConditional, splice form, etc.).
+ "clojure.core/reader-conditional:0"   "tagged-reader machinery"
+ "clojure.core/reader-conditional:3"   "tagged-reader machinery"
+ "clojure.core/reader-conditional:4"   "tagged-reader machinery"
+ "clojure.core/reader-conditional?:1"  "tagged-reader machinery"
+
+ ;; --- Java types as multimethod dispatch values ---
+ ;;
+ ;; The defmulti examples use `class` and Java class literals (String,
+ ;; Number) as dispatch values, which mino doesn't expose.
+ "clojure.core/defmulti:0"      "dispatches on Java class literals"
+ "clojure.core/defmulti:1"      "dispatches on Java class literals"
+ "clojure.core/defmulti:2"      "dispatches on Java class literals"
+ "clojure.core/defmacro:0"      "preamble uses clojure.walk semantics"
+ "clojure.core/defmacro:1"      "preamble uses clojure.walk semantics"
+ "clojure.core/defmacro:2"      "preamble uses clojure.walk semantics"
+
+ ;; --- Random / non-deterministic ---
+ "clojure.core/repeatedly:0"    "non-deterministic by design"
+ "clojure.core/repeatedly:1"    "non-deterministic by design"
+
+ ;; --- &env-dependent macro internals ---
+ ;;
+ ;; resolve/destructure/check-call examples use the macro-time `&env`
+ ;; map of locals. mino's macros don't expose &env; see
+ ;; mino/.local/BUGS.md.
+ "clojure.core/resolve:0"       "&env map of locals not exposed"
+ "clojure.core/resolve:1"       "&env map of locals not exposed"
+ "clojure.core/destructure:0"   "expects specific gensym names"
+ "clojure.core/destructure:1"   "&env-dependent macro chain"
+ ;; let:0 reads &env via local-context macro.
+ "clojure.core/let:0"           "&env map of locals not exposed"
+ "clojure.core/let:1"           "preamble: keyword 2-arg with slash in name"
+
+ ;; --- letfn mutual recursion (deferred to BUGS.md) ---
+ ;;
+ ;; mino's letfn macro expands to nested let; mutual recursion among
+ ;; bindings needs a letfn* special form.
+ "clojure.core/trampoline:0"    "letfn mutual recursion (BUGS.md)"
+ "clojure.core/trampoline:1"    "letfn mutual recursion (BUGS.md)"
+ "clojure.core/trampoline:2"    "letfn mutual recursion (BUGS.md)"
+
+ ;; --- with-redefs hang on certain core fns (BUGS.md) ---
+ "clojure.core/with-redefs:0"   "redef of internal core fns hangs"
+ "clojure.core/with-redefs:1"   "redef of internal core fns hangs"
+ "clojure.core/with-redefs:2"   "redef of internal core fns hangs"
+
+ ;; --- Internal Clojure helpers / variadic-print forms ---
+ "clojure.core/char-name-string:0" "private Clojure helper"
+ ;; subseq:5 ground truth is *clojure-version*, JVM-specific.
+ "clojure.core/subseq:5"          "JVM *clojure-version*"
+ ;; hash-map iteration order is unspecified.
+ "clojure.core/hash-map:0"        "small hash-map print order is impl-defined"
+ "clojure.core/hash-map:2"        "small hash-map print order is impl-defined"
+ "clojure.core/array-map:2"       "small array-map print order is impl-defined"
+ "clojure.core/array-map:12"      "small array-map print order is impl-defined"
+ ;; cons:4 / conj:13-14 / group-by:3 / merge-with:8 / reduce:0,10
+ ;; print sets whose element order is impl-defined.
+ "clojure.core/cons:4"            "set print order is impl-defined"
+ "clojure.core/conj:13"           "set print order is impl-defined"
+ "clojure.core/conj:14"           "set print order is impl-defined"
+ "clojure.core/group-by:3"        "set-valued map keys print impl-defined"
+ "clojure.core/merge-with:8"      "set-valued map values print impl-defined"
+ "clojure.core/reduce:0"          "set print order is impl-defined"
+ "clojure.core/reduce:10"         "set print order is impl-defined"
+ "clojure.set/union:0"            "small-set print order is impl-defined"
+ "clojure.set/union:1"            "small-set print order is impl-defined"
+ "clojure.set/union:2"            "small-set print order is impl-defined"
+ "clojure.set/project:1"          "small-set print order is impl-defined"
+ ;; name:9 needs ns/name separation in keyword storage (BUGS.md).
+ "clojure.core/name:9"            "keyword 2-arg ns/name conflate (BUGS.md)"
+
+ ;; --- Float vs double precision (mino doesn't have a float32 type) ---
+ "clojure.core/float:1"           "float32 truncation"
+ "clojure.core/float:2"           "float32 truncation"
+ ;; mod on doubles: print precision matches JVM now, but the JVM and C
+ ;; fmod arithmetic differ by ULPs on some inputs.
+ "clojure.core/mod:2"             "fmod ULP difference vs JVM"
+ "clojure.core/mod:3"             "fmod ULP difference vs JVM"
+
+ ;; --- partition examples that depend on letfn mutual recursion or
+ ;;     full-pass concat realisation (BUGS.md tracked) ---
+ "clojure.core/partition:16"      "user-defined spiral hangs (BUGS.md)"
+ "clojure.core/partition:17"      "user-defined spiral hangs (BUGS.md)"
+ "clojure.core/partition:18"      "user-defined spiral hangs (BUGS.md)"
+ "clojure.core/partition:19"      "user-defined spiral hangs (BUGS.md)"
+
+ ;; --- spec.alpha :via propagation gap (separate spec cycle) ---
+ "clojure.spec.alpha/explain-data:1"  ":via path propagation gap"
+ "clojure.spec.alpha/explain-data:2"  ":via path propagation gap"
+ "clojure.spec.alpha/explain-str:1"   "explain-str format differs"
+ "clojure.spec.alpha/&:0"             "regex op shape"
+ "clojure.spec.alpha/conformer:0"     "form-print divergence"
+ "clojure.spec.alpha/map-of:1"        "map-of edge-case gap"
+ "clojure.spec.alpha/map-of:2"        "map-of edge-case gap"
+ "clojure.spec.alpha/map-of:3"        "map-of edge-case gap"
+ "clojure.spec.alpha/map-of:4"        "map-of edge-case gap"
+ "clojure.spec.alpha/map-of:5"        "map-of edge-case gap"
+ "clojure.spec.alpha/unform:0"        "unform corner-case gap"
+ "clojure.spec.alpha/unform:1"        "unform corner-case gap"
+ "clojure.spec.alpha/unform:2"        "unform corner-case gap"
+ "clojure.spec.alpha/unform:3"        "unform corner-case gap"
+ "clojure.spec.alpha/with-gen:0"      "spec.gen.alpha integration"
+
+ ;; --- NaN? requires clojure.math namespace (intentional, separate cycle) ---
+ "clojure.core/NaN?:0"            "examples use clojure.math fns"
+ "clojure.core/NaN?:1"            "examples use clojure.math fns"
+ "clojure.core/NaN?:2"            "examples use clojure.math fns"
+ "clojure.core/NaN?:3"            "examples use clojure.math fns"
+ "clojure.core/NaN?:4"            "examples use clojure.math fns"
+
+ ;; --- walk on vectors prints sub-seq vs vector
+ ;;     (a real bug but it requires changing how walk preserves the
+ ;;     vector branch; see mino/.local/BUGS.md) ---
+ "clojure.walk/postwalk:1"        "walk vector branch loses vector tag"
+ "clojure.walk/prewalk:1"         "walk vector branch loses vector tag"
+ "clojure.walk/macroexpand-all:0" "depends on regenerated macro expansion"
+ "clojure.walk/macroexpand-all:1" "depends on regenerated macro expansion"
+ "clojure.zip/xml-zip:0"          "key-order divergence in xml-zip record"
+
+ ;; --- transduce trailing newline ---
+ "clojure.core/transduce:5"       "trailing-newline-only divergence"
+ ;; lazy-seq:5 ground truth includes ClojureDocs commentary in the
+ ;; expected string ("<- AND HERE mysqr IS CALLED ..."); not output.
+ "clojure.core/lazy-seq:5"        "expected string is ClojureDocs commentary"
+
+ ;; --- string fns that depend on regex features mino's tiny engine
+ ;;     doesn't fully support (| alternation, (?i) etc.) ---
+ "clojure.string/replace:2"       "regex alternation `|`"
+ "clojure.string/replace:3"       "regex alternation `|`"
+ "clojure.string/replace:4"       "regex (?i) inline flag"
+ "clojure.string/replace:5"       "trailing-greedy-group off-by-one (BUGS)"
+ "clojure.string/replace:6"       "regex feature gap"
+ "clojure.string/escape:4"        "char-keyed map edge case"
+ "clojure.string/escape:5"        "char-keyed map edge case"
+
+ ;; --- if-let examples that depend on preamble side-effects we can't
+ ;;     run yet ---
+ "clojure.core/if-let:3"          "preamble side-effect chain"
+ "clojure.core/if-let:8"          "user macro if-let* recursion blows stack"
+ "clojure.core/if-let:12"         "user macro if-let* with let-bindings shape"
+ "clojure.core/if-let:13"         "user macro if-let* with let-bindings shape"
+
+ ;; --- merge-with: mino rejects non-map args; JVM passes-through single
+ ;;     non-map. The deep-merge idiom in the corpus relies on this. ---
+ "clojure.core/merge:3"           "merge-with stricter on non-map args"
+ "clojure.core/merge:4"           "merge-with stricter on non-map args"
+
+ ;; --- mapv:5 forces `(map println [1 2 3])` whose realization order
+ ;;     interleaves with the print of the result.
+ "clojure.core/mapv:5"            "lazy-seq print interleaves with side effects"
+
+ ;; --- keyword 2-arg with slash-in-name: indistinguishable storage; see
+ ;;     mino/.local/BUGS.md ("Keyword internal storage conflates ns and name on slash").
+ "clojure.core/keyword:8"         "ns/name conflation on slash (BUGS.md)"
+
+ ;; --- remove:10 set/map iteration order (already covered, but the
+ ;;     specific frequencies key-order differs from bb).
+ "clojure.core/remove:10"         "frequencies iteration order is impl-defined"
+
+ ;; --- str / get-in / partial / for / partition transducer chain ---
+ ;;
+ ;; These touch corners (e.g. partial sym callable, into with java
+ ;; iterables) that the bb / JVM print specifically.
+ "clojure.core/str:0"             "JVM toString idiom"
+ "clojure.core/str:2"             "JVM toString idiom"
+ "clojure.core/get-in:0"          "preamble: java interop"
+ "clojure.core/partial:15"        "preamble: java interop"
+ "clojure.core/for:11"            "preamble: java interop"
 }

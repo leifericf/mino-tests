@@ -83,12 +83,26 @@
 
 ;; --- script rendering ---
 
+;; Prelude prepended to every rendered script. bb (and the JVM REPL) pre-
+;; alias these namespaces; mino doesn't, so cookbook forms like
+;; `(str/replace ...)` would otherwise fail at the alias resolver before
+;; mino's stdlib path even ran. Keeping the prelude identical on both
+;; the bb ground-truth side (clojuredocs_build.clj) and the mino probe
+;; side guarantees the two halves of the diff see the same namespace
+;; surface.
+(def script-prelude
+  (str "(require '[clojure.string :as str]"
+       " '[clojure.set :as set]"
+       " '[clojure.walk :as walk]"
+       " '[clojure.pprint :as pp])\n"))
+
 (defn- render-script
   "Render a mino script that prints (pr-str <form>) with print bounds
    so an infinite seq doesn't hang the subprocess. Matches the bb
    render at fixture-build time so the comparison is apples-to-apples."
   [tuple]
-  (str (:preamble-source tuple)
+  (str script-prelude
+       (:preamble-source tuple)
        "\n(binding [*print-length* 200 *print-level* 20]"
        " (println (pr-str " (:form-source tuple) ")))\n"))
 

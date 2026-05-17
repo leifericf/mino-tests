@@ -155,23 +155,51 @@
    The stored shape is source-only -- preamble and form are kept as
    pr-str text rather than as parsed forms -- so the EDN stays
    readable by clojure.edn (no reader-macro literals). The text
-   round-trips cleanly into mino's full reader at probe time."
-  [{:keys [code expected]}]
+   round-trips cleanly into mino's full reader at probe time.
+
+   `carry-pre` is the running preamble text accumulated from every
+   prior segment in the same example body; helper `def`s and macros
+   defined alongside the first `;;=>` line are visible to every
+   subsequent test value."
+  [carry-pre {:keys [code expected]}]
   (when (and expected (seq code))
     (let [code-str (strip-repl-prompts (str/join "\n" code))
           forms (read-all code-str)]
       (when (and forms (seq forms))
-        (let [pre (butlast forms)
-              form (last forms)]
-          {:preamble-source (str/join "\n" (map pr-str pre))
-           :form-source (pr-str form)
-           :expected (str/trim expected)
-           :skip-reason (triage-reason forms)})))))
+        (let [pre        (butlast forms)
+              form       (last forms)
+              pre-text   (str/join "\n" (map pr-str pre))
+              merged-pre (->> [carry-pre pre-text]
+                              (remove str/blank?)
+                              (str/join "\n"))]
+          {:preamble-source merged-pre
+           :form-source     (pr-str form)
+           :expected        (str/trim expected)
+           :skip-reason     (triage-reason forms)
+           ;; The full segment text (preamble + form) becomes the carry
+           ;; for any subsequent segment in the same body. Side-effect
+           ;; forms (e.g. `(println ...)`) at the head of the example
+           ;; ride along but are harmless because the rendered script
+           ;; only prints (pr-str form-source).
+           :segment-text    (str/join "\n" (map pr-str forms))})))))
 
-(defn parse-body [body]
-  (->> (split-segments body)
-       (keep segment->tuple)
-       vec))
+(defn parse-body
+  "Parse an example body into tuples, carrying every prior segment's
+   text forward as preamble so helper defs survive across `;;=>`
+   boundaries. Returns the list of tuples with `:segment-text` stripped
+   (that field is parse-time bookkeeping, not stored in the fixture)."
+  [body]
+  (loop [segs (split-segments body), carry "", out []]
+    (if (empty? segs)
+      (mapv #(dissoc % :segment-text) out)
+      (let [t (segment->tuple carry (first segs))]
+        (if t
+          (recur (rest segs)
+                 (->> [carry (:segment-text t)]
+                      (remove str/blank?)
+                      (str/join "\n"))
+                 (conj out t))
+          (recur (rest segs) carry out))))))
 
 ;; ---- Corpus extraction ----
 
@@ -186,13 +214,25 @@
 
 ;; ---- bb ground truth ----
 
+;; Same prelude as `diff_clojuredocs.clj`. bb's REPL auto-aliases these
+;; namespaces, but emitting the explicit `require` keeps the bb and mino
+;; runs reading the same surface; if the prelude ever drifts we want a
+;; ground-truth re-build to surface it instead of letting the two halves
+;; quietly diverge.
+(def script-prelude
+  (str "(require '[clojure.string :as str]"
+       " '[clojure.set :as set]"
+       " '[clojure.walk :as walk]"
+       " '[clojure.pprint :as pp])\n"))
+
 (defn- render-script
   "Render a self-contained script that prints (pr-str <form>) with
    *print-length* and *print-level* bound. The bounds keep an infinite
    lazy seq from hanging the subprocess; an over-long print still gets
    truncated cleanly with `...` at the end."
   [{:keys [preamble-source form-source]}]
-  (str preamble-source
+  (str script-prelude
+       preamble-source
        "\n(binding [*print-length* 200 *print-level* 20]"
        " (println (pr-str " form-source ")))\n"))
 

@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.10.0 — ClojureDocs probe: stdlib aliases + multi-segment preambles
+
+Two probe-side correctness fixes that surface more of mino's actual
+behavior in the diff.
+
+### Auto-`require` common stdlib aliases
+
+bb (and the JVM REPL) pre-alias `clojure.string` → `str`,
+`clojure.set` → `set`, `clojure.walk` → `walk`, and `clojure.pprint`
+→ `pp`. mino doesn't. Cookbook forms like `(str/replace ...)` were
+failing at alias resolution before mino's stdlib path even ran,
+masking dozens of examples that pass cleanly once the aliases are in
+scope.
+
+The probe and the bb ground-truth build now both prepend the same
+`(require ...)` prelude to every rendered script. Symmetric on both
+sides so any future prelude drift surfaces at fixture-rebuild time
+rather than as silent diff noise.
+
+### Carry preamble forward across `;;=>` boundaries
+
+ClojureDocs example bodies frequently define a helper in one block
+and call it from several `;;=>` blocks below. The old parser stored
+each block's preamble independently, so any call into an earlier
+block's helper failed at lookup. `parse-body` now threads the running
+preamble through each segment so later test forms see the same
+namespace state as the first.
+
+### Effect
+
+Re-running `./mino/mino task clojuredocs-refresh` regrew the corpus
+from 1145 examples with usable ground truth to 1327 (+182), and the
+probe pass count climbed from 889 to 1023 (+134) on the same mino
+binary. The newly-unmasked failures are the real mino-side stdlib
+gaps that the next mino release cycle will close.
+
 ## v0.9.0 — ClojureDocs Differential Probe
 
 New differential test probe at `tests/adv/script/diff_clojuredocs.clj`.

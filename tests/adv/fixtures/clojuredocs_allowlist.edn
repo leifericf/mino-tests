@@ -303,13 +303,17 @@
  ;; expected string ("<- AND HERE mysqr IS CALLED ..."); not output.
  "clojure.core/lazy-seq:5"        "expected string is ClojureDocs commentary"
 
+ ;; --- replace:4,5 preamble defines a Java-interop helper ---
+ ;;
+ ;; The preamble does (import (java.util.regex Matcher)) and
+ ;; (defn re-qr [r] (Matcher/quoteReplacement r)), which mino can't
+ ;; execute. The test forms themselves don't depend on Java; just the
+ ;; preamble crashes the script.
+ "clojure.string/replace:4"       "preamble imports java.util.regex.Matcher"
+ "clojure.string/replace:5"       "preamble imports java.util.regex.Matcher"
+
  ;; --- string fns that depend on regex features mino's tiny engine
- ;;     doesn't fully support (| alternation, (?i) etc.) ---
- "clojure.string/replace:2"       "regex alternation `|`"
- "clojure.string/replace:3"       "regex alternation `|`"
- "clojure.string/replace:4"       "regex (?i) inline flag"
- "clojure.string/replace:5"       "trailing-greedy-group off-by-one (BUGS)"
- "clojure.string/replace:6"       "regex feature gap"
+ ;;     doesn't fully support (nested alternation only) ---
  "clojure.string/escape:4"        "char-keyed map edge case"
  "clojure.string/escape:5"        "char-keyed map edge case"
 

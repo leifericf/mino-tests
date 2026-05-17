@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.10.3 — Drop regex-alternation allowlist after mino engine fix
+
+Mino's tiny-regex engine now compiles `|` as a top-level ALT op
+(v0.281.0). The three `clojure.string/replace` allowlist entries
+that were `|`-blocked (`:2`, `:3`, `:6`) drop off; the same commit
+also fixed the trailing-greedy `matchlength` reset bug, so the
+fodder-with-trailing-space class of replace divergence stops
+firing.
+
+Two `replace` entries (`:4`, `:5`) remain allowlisted: their
+preambles `(import (java.util.regex Matcher))` to define a
+helper that mino can't execute (Java interop), even though the
+test form itself works.
+
+Probe verdict against mino v0.282.0: **1071 pass / 0 fail /
+256 allowlisted / 0 mino-error out of 1327**, up from 1068
+pass in v0.10.2.
+
 ## v0.10.2 — Probe-prelude requires clojure.math; allowlist shrinks
 
 Adds `clojure.math` to the rendered probe prelude (and the

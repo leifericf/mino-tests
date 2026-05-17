@@ -17,7 +17,10 @@
   (impl/run-script-suite {:mode :smoke :seed 0}))
 
 (defn adv-test-soak [& _]
-  (let [seed (mod (System/currentTimeMillis) 1000000)]
+  ;; Wall-clock derived random seed -- mino's (time-ms) returns
+  ;; double milliseconds since epoch; long-cast to int truncates
+  ;; into the 0..999999 range.
+  (let [seed (mod (long (time-ms)) 1000000)]
     (println "[mino-tests] adv-test-soak (random seed)")
     (println "  seed:" seed)
     (impl/run-script-suite {:mode :soak :seed seed})))
@@ -27,7 +30,7 @@
   (impl/run-script-suite {:mode :smoke :seed 0 :only "diff_"}))
 
 (defn diff-test-soak [& _]
-  (let [seed (mod (System/currentTimeMillis) 1000000)]
+  (let [seed (mod (long (time-ms)) 1000000)]
     (println "[mino-tests] diff-test-soak (diff probes, random seed)")
     (println "  seed:" seed)
     (impl/run-script-suite {:mode :soak :seed seed :only "diff_"})))

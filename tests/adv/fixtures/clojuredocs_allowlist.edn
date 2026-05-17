@@ -250,13 +250,6 @@
  ;; --- Float vs double precision (mino doesn't have a float32 type) ---
  "clojure.core/float:1"           "float32 truncation"
  "clojure.core/float:2"           "float32 truncation"
- ;; --- partition examples that depend on letfn mutual recursion or
- ;;     full-pass concat realisation (BUGS.md tracked) ---
- "clojure.core/partition:16"      "user-defined spiral hangs (BUGS.md)"
- "clojure.core/partition:17"      "user-defined spiral hangs (BUGS.md)"
- "clojure.core/partition:18"      "user-defined spiral hangs (BUGS.md)"
- "clojure.core/partition:19"      "user-defined spiral hangs (BUGS.md)"
-
  ;; --- spec.alpha :via propagation gap (separate spec cycle) ---
  "clojure.spec.alpha/explain-data:1"  ":via path propagation gap"
  "clojure.spec.alpha/explain-data:2"  ":via path propagation gap"

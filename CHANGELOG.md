@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.10.4 — Drop partition-spiral allowlist after apply-lazy fix
+
+Mino v0.283.0 makes `apply` pass-through lazy / chunked tails to
+fn rest-args, which closes the spiral hang from the ClojureDocs
+probe. The four `clojure.core/partition:16-19` entries drop off.
+
+Probe verdict against mino v0.283.0: **1075 pass / 0 fail /
+0 mino-error / 252 allowlisted out of 1327**, up from 1071 pass
+in v0.10.3.
+
 ## v0.10.3 — Drop regex-alternation allowlist after mino engine fix
 
 Mino's tiny-regex engine now compiles `|` as a top-level ALT op

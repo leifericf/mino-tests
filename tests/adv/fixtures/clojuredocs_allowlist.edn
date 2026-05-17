@@ -213,31 +213,14 @@
  "clojure.core/repeatedly:0"    "non-deterministic by design"
  "clojure.core/repeatedly:1"    "non-deterministic by design"
 
- ;; --- &env-dependent macro internals ---
+ ;; --- destructure exposes specific gensym names ---
  ;;
- ;; resolve/destructure/check-call examples use the macro-time `&env`
- ;; map of locals. mino's macros don't expose &env; see
- ;; mino/.local/BUGS.md.
- "clojure.core/resolve:0"       "&env map of locals not exposed"
- "clojure.core/resolve:1"       "&env map of locals not exposed"
- "clojure.core/destructure:0"   "expects specific gensym names"
- "clojure.core/destructure:1"   "&env-dependent macro chain"
- ;; let:0 reads &env via local-context macro.
- "clojure.core/let:0"           "&env map of locals not exposed"
- "clojure.core/let:1"           "preamble: keyword 2-arg with slash in name"
-
- ;; --- letfn mutual recursion (deferred to BUGS.md) ---
- ;;
- ;; mino's letfn macro expands to nested let; mutual recursion among
- ;; bindings needs a letfn* special form.
- "clojure.core/trampoline:0"    "letfn mutual recursion (BUGS.md)"
- "clojure.core/trampoline:1"    "letfn mutual recursion (BUGS.md)"
- "clojure.core/trampoline:2"    "letfn mutual recursion (BUGS.md)"
-
- ;; --- with-redefs hang on certain core fns (BUGS.md) ---
- "clojure.core/with-redefs:0"   "redef of internal core fns hangs"
- "clojure.core/with-redefs:1"   "redef of internal core fns hangs"
- "clojure.core/with-redefs:2"   "redef of internal core fns hangs"
+ ;; The destructure prim is public in mino; bb's ground-truth
+ ;; strings pin literal gensym names like `vec__10263` from JVM's
+ ;; runtime, which mino can't match. Mino's macros do expose &env
+ ;; now, so resolve / let:0 et al may pass on their own.
+ "clojure.core/destructure:0"   "expects specific JVM gensym names"
+ "clojure.core/destructure:1"   "expects specific JVM gensym names"
 
  ;; --- Internal Clojure helpers / variadic-print forms ---
  "clojure.core/char-name-string:0" "private Clojure helper"
@@ -267,11 +250,6 @@
  ;; --- Float vs double precision (mino doesn't have a float32 type) ---
  "clojure.core/float:1"           "float32 truncation"
  "clojure.core/float:2"           "float32 truncation"
- ;; mod on doubles: print precision matches JVM now, but the JVM and C
- ;; fmod arithmetic differ by ULPs on some inputs.
- "clojure.core/mod:2"             "fmod ULP difference vs JVM"
- "clojure.core/mod:3"             "fmod ULP difference vs JVM"
-
  ;; --- partition examples that depend on letfn mutual recursion or
  ;;     full-pass concat realisation (BUGS.md tracked) ---
  "clojure.core/partition:16"      "user-defined spiral hangs (BUGS.md)"
@@ -296,18 +274,25 @@
  "clojure.spec.alpha/unform:3"        "unform corner-case gap"
  "clojure.spec.alpha/with-gen:0"      "spec.gen.alpha integration"
 
- ;; --- NaN? requires clojure.math namespace (intentional, separate cycle) ---
- "clojure.core/NaN?:0"            "examples use clojure.math fns"
- "clojure.core/NaN?:1"            "examples use clojure.math fns"
- "clojure.core/NaN?:2"            "examples use clojure.math fns"
- "clojure.core/NaN?:3"            "examples use clojure.math fns"
- "clojure.core/NaN?:4"            "examples use clojure.math fns"
+ ;; --- NaN? examples have Math/sqrt etc. in their preambles ---
+ ;;
+ ;; The form itself works (uses ##Inf or clojure.math) but the
+ ;; preamble references Java's Math/sqrt which mino can't run.
+ "clojure.core/NaN?:0"            "preamble uses Math/sqrt"
+ "clojure.core/NaN?:1"            "preamble uses Math/sqrt"
+ "clojure.core/NaN?:2"            "preamble uses Math/sqrt"
+ "clojure.core/NaN?:3"            "preamble uses Math/sqrt"
+ "clojure.core/NaN?:4"            "preamble uses Math/sqrt"
 
- ;; --- walk on vectors prints sub-seq vs vector
- ;;     (a real bug but it requires changing how walk preserves the
- ;;     vector branch; see mino/.local/BUGS.md) ---
- "clojure.walk/postwalk:1"        "walk vector branch loses vector tag"
- "clojure.walk/prewalk:1"         "walk vector branch loses vector tag"
+ ;; --- trampoline:2 / with-redefs:2: bb-side has trailing commentary ---
+ "clojure.core/trampoline:2"      "ground-truth includes ClojureDocs commentary"
+ "clojure.core/with-redefs:2"     "redef of intermediate var doesn't propagate"
+
+ ;; --- resolve:0/1 examples assert Java-class branch ---
+ "clojure.core/resolve:0"         "expects Java class identification"
+ "clojure.core/resolve:1"         "expects Java class identification"
+
+ ;; --- walk macroexpand-all depends on regenerated macro expansion ---
  "clojure.walk/macroexpand-all:0" "depends on regenerated macro expansion"
  "clojure.walk/macroexpand-all:1" "depends on regenerated macro expansion"
  "clojure.zip/xml-zip:0"          "key-order divergence in xml-zip record"

@@ -223,7 +223,8 @@
   (str "(require '[clojure.string :as str]"
        " '[clojure.set :as set]"
        " '[clojure.walk :as walk]"
-       " '[clojure.pprint :as pp])\n"))
+       " '[clojure.pprint :as pp]"
+       " '[clojure.math])\n"))
 
 (defn- render-script
   "Render a self-contained script that prints (pr-str <form>) with

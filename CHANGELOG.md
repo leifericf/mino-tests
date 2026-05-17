@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.10.2 — Probe-prelude requires clojure.math; allowlist shrinks
+
+Adds `clojure.math` to the rendered probe prelude (and the
+bb-side ground-truth build) so corpus examples that reach for
+`clojure.math/asin` / `clojure.math/log` / etc. resolve. Several
+allowlist entries fall off because mino's underlying behavior
+caught up with JVM:
+
+- `merge:3,4` — mino's `merge-with` now passes a single non-map
+  through (matching JVM).
+- `keyword:8`, `name:9` — keyword storage now records ns_len so
+  the 2-arg constructor's split survives round-trip.
+- `mod:2,3` — mino's mod arithmetic now matches JVM ULP-for-ULP.
+- `walk/postwalk:1`, `walk/prewalk:1` — `walk` now recurses into
+  lazy seqs returned by the walking-fn vector branch.
+- `with-redefs:0,1` — mino's `last` survives `with-redefs` of
+  `first`.
+- `let:1` — keyword ns/name separation fix.
+
+Probe verdict against mino v0.280.0: **1068 pass / 0 fail /
+259 allowlisted / 0 mino-error out of 1327 tested**, up from
+1058 pass in v0.10.1.
+
 ## v0.10.1 — ClojureDocs allowlist sweep after mino-side fixes
 
 Expands the per-example allowlist for the differential probe to

@@ -10,26 +10,34 @@
 (defn- major-count []   (:collections-major (gc-stats)))
 
 ;; Default nursery is 1 MiB; allocating a few hundred thousand short-
-;; lived cons cells forces many minor cycles. A few majors may fire
-;; along the way as some survivors promote and old-gen crosses the
+;; lived persistent vectors forces many minor cycles. A few majors may
+;; fire along the way as some survivors promote and old-gen crosses the
 ;; growth threshold, but minor must dominate the collection work.
+;;
+;; `mapv inc (range N)` is the allocation pattern used here: it builds
+;; a fresh persistent vector each iteration, so each call generates
+;; nursery-bound heap that subsequent iterations make unreachable.
+;; (Earlier revisions used `(doall (take ... (range ...)))`; mino's
+;; lazy-seq fast paths have since fused that shape into a tight loop
+;; that allocates almost nothing, so it no longer exercises the
+;; collector enough to make the inequality below meaningful.)
 (deftest minor-fires-under-nursery-pressure
   (let [m0 (minor-count)
         M0 (major-count)]
     (dotimes [_ 2000]
-      (doall (take 100 (range 1000))))
+      (mapv inc (range 1000)))
     (is (> (minor-count) m0))
     (is (> (- (minor-count) m0) (* 10 (- (major-count) M0))))))
 
 ;; After enough minor survivors the old-gen baseline grows; a repeated
 ;; build-use-discard cycle should show bytes-old nonzero without
 ;; triggering a major per minor (young-only collection does the bulk
-;; of the work).
+;; of the work). Same allocation-pattern rationale as the test above.
 (deftest promotion-grows-old-gen
   (let [m0 (minor-count)
         M0 (major-count)]
     (dotimes [_ 500]
-      (doall (take 200 (range 10000))))
+      (mapv inc (range 10000)))
     (is (> (old-bytes) 0))
     ;; Majors should be much rarer than minors.
     (is (< (- (major-count) M0) (- (minor-count) m0)))))

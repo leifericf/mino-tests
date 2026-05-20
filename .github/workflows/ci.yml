@@ -47,6 +47,12 @@ jobs:
           ./mino task build-lean
 
       - name: Migrated suite
+        # MINO_TEST_TRACE writes a `[trace] <ns>/<test>` line to stderr
+        # before each test runs. With the runner-specific hang on
+        # ubuntu-24.04-arm we need the trace to identify which test
+        # owns the stall when the 15-min step timeout fires.
+        env:
+          MINO_TEST_TRACE: "1"
         run: ./mino/mino tests/run_migrated.clj
 
       - name: Fault injection

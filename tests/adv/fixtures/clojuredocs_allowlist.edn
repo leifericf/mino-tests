@@ -164,10 +164,6 @@
  ;;
  ;; mino reads reader conditionals through but doesn't expose the
  ;; tagged-reader machinery (ReaderConditional, splice form, etc.).
- "clojure.core/reader-conditional:0"   "tagged-reader machinery"
- "clojure.core/reader-conditional:3"   "tagged-reader machinery"
- "clojure.core/reader-conditional:4"   "tagged-reader machinery"
- "clojure.core/reader-conditional?:1"  "tagged-reader machinery"
 
  ;; --- Java types as multimethod dispatch values ---
  ;;

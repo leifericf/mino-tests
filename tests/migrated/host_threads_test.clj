@@ -138,6 +138,30 @@
     (is (some? err))
     (is (some? (re-find #"bc-direct-throw" err)))))
 
+(deftest concurrent-transients-preserve-source-collection
+  ;; N futures concurrently take (transient src) and mutate the
+  ;; transient through assoc!/persistent!. The original persistent
+  ;; vector src must be untouched after every future joins. Owner-ID
+  ;; mint is the property under test: if two transients shared the
+  ;; same owner_id the second one would observe `node->owner == K`
+  ;; inside hnode_ensure_owned and edit a subtree the original src
+  ;; still references, silently flipping a slot.
+  (when (> (mino-thread-limit) 1)
+    (let [n     (min 4 (max 2 (dec (mino-thread-limit))))
+          width 64
+          iters 200
+          src   (vec (range width))
+          futs  (doall (for [tid (range n)]
+                         (future
+                           (dotimes [_ iters]
+                             (let [t (transient src)]
+                               (dotimes [j width]
+                                 (assoc! t j (+ width tid j)))
+                               (persistent! t)))
+                           :ok)))]
+      (doseq [f futs] (is (= :ok @f)))
+      (is (= src (vec (range width)))))))
+
 (deftest cancel-of-promise-unblocks-future-deref-on-it
   ;; A worker deref'ing an undelivered promise parks in cv_wait on
   ;; the promise's cv. Cancelling the promise must wake the worker

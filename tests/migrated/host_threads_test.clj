@@ -198,6 +198,27 @@
         (doseq [f futs] (is (= :ok @f)))
         (is (= (* n m) (:counter (meta a))))))))
 
+(deftest add-watch-no-lost-installs-under-concurrency
+  ;; N futures each install one watch on the same atom with distinct
+  ;; keys. After all installs complete, one swap! on the atom must
+  ;; fire all N watches. A lost install -- two threads observing the
+  ;; same empty/partial watches map and racing to publish the new
+  ;; one -- drops the slower thread's entry, leaving fewer than N
+  ;; watches when the swap! runs.
+  (when (> (mino-thread-limit) 1)
+    (let [a       (atom 0)
+          counter (atom 0)
+          n       (min 4 (max 2 (dec (mino-thread-limit))))
+          futs    (doall (for [i (range n)]
+                           (future
+                             (add-watch a (str "k" i)
+                                        (fn [_k _r _o _n_]
+                                          (swap! counter inc)))
+                             :ok)))]
+      (doseq [f futs] (is (= :ok @f)))
+      (swap! a inc)
+      (is (= n @counter)))))
+
 (deftest cancel-of-promise-unblocks-future-deref-on-it
   ;; A worker deref'ing an undelivered promise parks in cv_wait on
   ;; the promise's cv. Cancelling the promise must wake the worker

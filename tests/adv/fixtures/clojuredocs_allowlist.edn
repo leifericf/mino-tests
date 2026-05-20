@@ -216,6 +216,8 @@
  ;; --- Float vs double precision (mino doesn't have a float32 type) ---
  "clojure.core/float:1"           "float32 truncation"
  "clojure.core/float:2"           "float32 truncation"
+ "clojure.core/unchecked-float:1" "float32 print form preserves IEEE-754 precision (mino) vs JVM trim"
+ "clojure.core/unchecked-long:11" "bigint-just-below-LONG_MIN wrap; mino clamps to LONG_MIN, JVM takes low-64 bits"
  ;; --- spec.alpha map-of gen-backed examples (require test.check) ---
  "clojure.spec.alpha/map-of:3"        "map-of explain (#:clojure.spec.alpha map shape)"
  "clojure.spec.alpha/map-of:4"        "map-of gen sample requires test.check"

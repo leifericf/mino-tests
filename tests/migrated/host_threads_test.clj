@@ -162,6 +162,24 @@
       (doseq [f futs] (is (= :ok @f)))
       (is (= src (vec (range width)))))))
 
+(deftest lazy-force-runs-thunk-exactly-once-under-concurrency
+  ;; A lazy-seq's thunk must run at most once even when N futures
+  ;; race to force it. The counter inside the thunk increments
+  ;; through swap! and is the property under test: when the
+  ;; realization race is unsynchronized, two or more forcers can
+  ;; both observe unrealized state and both run the body, leaving
+  ;; the counter > 1.
+  (when (> (mino-thread-limit) 1)
+    (let [n       (min 4 (max 2 (dec (mino-thread-limit))))
+          counter (atom 0)
+          lz      (lazy-seq
+                    (swap! counter inc)
+                    (list :only))
+          futs    (doall (for [_ (range n)]
+                           (future (first lz))))]
+      (doseq [f futs] (is (= :only @f)))
+      (is (= 1 @counter)))))
+
 (deftest cancel-of-promise-unblocks-future-deref-on-it
   ;; A worker deref'ing an undelivered promise parks in cv_wait on
   ;; the promise's cv. Cancelling the promise must wake the worker

@@ -105,14 +105,13 @@
  ;; reference; mino realizes and prints the seq contents.
  "clojure.core/pr-str:0"        "JVM LazySeq object-id print form"
  "clojure.core/prn-str:0"       "JVM *print-length* truncation differs"
- ;; PersistentQueue: no built-in queue type; the corpus examples poke at
- ;; clojure.lang.PersistentQueue/EMPTY which mino doesn't provide.
- "clojure.core/empty:0"         "empty PersistentQueue requires Java queue"
- "clojure.core/empty:1"         "empty PersistentQueue requires Java queue"
- "clojure.core/empty:2"         "empty PersistentQueue requires Java queue"
- "clojure.core/empty:3"         "empty PersistentQueue requires Java queue"
- "clojure.core/empty:4"         "empty PersistentQueue requires Java queue"
- "clojure.core/empty:5"         "preamble: PersistentQueue/EMPTY"
+ ;; PersistentQueue:0,3 print as `#<PersistentQueue clojure.lang.PersistentQueue@HASH>`
+ ;; on JVM Clojure (Object.hashCode embedded in the print form). mino's
+ ;; printer emits the portable `#queue [...]` shape; these two examples
+ ;; can never match exactly. The remaining empty examples (:1, :2, :4,
+ ;; :5) pass after mino's PersistentQueue shipped.
+ "clojure.core/empty:0"         "JVM Object.hashCode in print form"
+ "clojure.core/empty:3"         "JVM Object.hashCode in print form"
  ;; ex-cause / ex-data print forms include a JVM stack-trace
  ;; serialisation we can't reproduce.
  "clojure.core/ex-cause:0"      "JVM #error stack-trace serialisation"

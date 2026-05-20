@@ -13,36 +13,7 @@
 ;; A divergence that's "just a bug" should land in mino/.local/BUGS.md
 ;; and get fixed; the allowlist isn't a place to silence open issues.
 
-{;; --- Java-style unchecked arithmetic ---
- ;;
- ;; mino is alpha and pre-1.0. The unchecked-* family doesn't have a
- ;; matching primitive in mino's number tower yet (per the WWLD memory:
- ;; named opt-in, not silent divergence). When mino does ship them they
- ;; will go through `unchecked-*` opt-ins, but the JVM semantics --
- ;; wrap-on-overflow for `int`, narrowing casts for `byte`/`short` --
- ;; are not stable contracts on a runtime where numbers are tagged.
- "clojure.core/unchecked-int"          "unchecked-* not in mino yet"
- "clojure.core/unchecked-long"         "unchecked-* not in mino yet"
- "clojure.core/unchecked-byte"         "unchecked-* not in mino yet"
- "clojure.core/unchecked-short"        "unchecked-* not in mino yet"
- "clojure.core/unchecked-float"        "unchecked-* not in mino yet"
- "clojure.core/unchecked-double"       "unchecked-* not in mino yet"
- "clojure.core/unchecked-char"         "unchecked-* not in mino yet"
- "clojure.core/unchecked-add"          "unchecked-* not in mino yet"
- "clojure.core/unchecked-add-int"      "unchecked-* not in mino yet"
- "clojure.core/unchecked-subtract"     "unchecked-* not in mino yet"
- "clojure.core/unchecked-subtract-int" "unchecked-* not in mino yet"
- "clojure.core/unchecked-multiply"     "unchecked-* not in mino yet"
- "clojure.core/unchecked-multiply-int" "unchecked-* not in mino yet"
- "clojure.core/unchecked-divide-int"   "unchecked-* not in mino yet"
- "clojure.core/unchecked-inc"          "unchecked-* not in mino yet"
- "clojure.core/unchecked-inc-int"      "unchecked-* not in mino yet"
- "clojure.core/unchecked-dec"          "unchecked-* not in mino yet"
- "clojure.core/unchecked-dec-int"      "unchecked-* not in mino yet"
- "clojure.core/unchecked-negate"       "unchecked-* not in mino yet"
- "clojure.core/unchecked-negate-int"   "unchecked-* not in mino yet"
- "clojure.core/unchecked-remainder-int" "unchecked-* not in mino yet"
-
+{
  ;; --- Java arrays ---
  ;;
  ;; mino doesn't have host-mutable primitive arrays. The constructors,

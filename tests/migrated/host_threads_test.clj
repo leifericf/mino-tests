@@ -180,6 +180,24 @@
       (doseq [f futs] (is (= :only @f)))
       (is (= 1 @counter)))))
 
+(deftest alter-meta-bang-no-lost-updates
+  ;; N futures call alter-meta! concurrently with an update-style fn
+  ;; that increments a counter inside the meta map. Without
+  ;; serialization the read-compute-publish sequence loses updates;
+  ;; with the CAS retry loop the final counter equals N * M.
+  (when (> (mino-thread-limit) 1)
+    (let [a (atom 0)]
+      (alter-meta! a (fn [_] {:counter 0}))
+      (let [n    (min 4 (max 2 (dec (mino-thread-limit))))
+            m    200
+            futs (doall (for [_ (range n)]
+                          (future
+                            (dotimes [_ m]
+                              (alter-meta! a update :counter inc))
+                            :ok)))]
+        (doseq [f futs] (is (= :ok @f)))
+        (is (= (* n m) (:counter (meta a))))))))
+
 (deftest cancel-of-promise-unblocks-future-deref-on-it
   ;; A worker deref'ing an undelivered promise parks in cv_wait on
   ;; the promise's cv. Cancelling the promise must wake the worker

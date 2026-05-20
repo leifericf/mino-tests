@@ -46,11 +46,11 @@ jobs:
           make
           ./mino task build-lean
 
-      - name: Dosync-send isolated repro (diagnose CI hang #2)
-        # Runs the suspected hanging test in isolation with
-        # short timeout so we get fast signal on the arm runner.
-        timeout-minutes: 3
-        continue-on-error: true
+      - name: Dosync-send regression (CI hang #2)
+        # Fast regression against the agent worker-spawn / enqueue
+        # race fixed in mino v0.381.1. Times out in 30s on any
+        # platform where the fix has regressed.
+        timeout-minutes: 1
         run: ./mino/mino tests/migrated/dosync_send_repro.clj
 
       - name: Migrated suite

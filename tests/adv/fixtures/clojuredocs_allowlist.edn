@@ -226,17 +226,11 @@
  "clojure.spec.alpha/explain-data:2"  ":via path propagation gap"
  "clojure.spec.alpha/explain-str:1"   "explain-str format differs"
  "clojure.spec.alpha/&:0"             "regex op shape"
- "clojure.spec.alpha/conformer:0"     "form-print divergence"
  "clojure.spec.alpha/map-of:1"        "map-of edge-case gap"
  "clojure.spec.alpha/map-of:2"        "map-of edge-case gap"
  "clojure.spec.alpha/map-of:3"        "map-of edge-case gap"
  "clojure.spec.alpha/map-of:4"        "map-of edge-case gap"
  "clojure.spec.alpha/map-of:5"        "map-of edge-case gap"
- "clojure.spec.alpha/unform:0"        "unform corner-case gap"
- "clojure.spec.alpha/unform:1"        "unform corner-case gap"
- "clojure.spec.alpha/unform:2"        "unform corner-case gap"
- "clojure.spec.alpha/unform:3"        "unform corner-case gap"
- "clojure.spec.alpha/with-gen:0"      "spec.gen.alpha integration"
 
  ;; --- NaN? examples have Math/sqrt etc. in their preambles ---
  ;;

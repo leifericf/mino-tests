@@ -277,9 +277,8 @@
  "clojure.core/NaN?:3"            "preamble uses Math/sqrt"
  "clojure.core/NaN?:4"            "preamble uses Math/sqrt"
 
- ;; --- trampoline:2 / with-redefs:2: bb-side has trailing commentary ---
+ ;; --- trampoline:2: bb-side has trailing commentary ---
  "clojure.core/trampoline:2"      "ground-truth includes ClojureDocs commentary"
- "clojure.core/with-redefs:2"     "redef of intermediate var doesn't propagate"
 
  ;; --- resolve:0/1 examples assert Java-class branch ---
  "clojure.core/resolve:0"         "expects Java class identification"

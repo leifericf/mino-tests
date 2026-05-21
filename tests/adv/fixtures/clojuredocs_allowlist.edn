@@ -71,12 +71,12 @@
 
  ;; --- Java tag predicates ---
  ;;
- ;; These predicates depend on Java's class system or its specific
- ;; reflection-based instance checks. Mino's type model is different.
- "clojure.core/inst?"          "Java inst? semantics"
- "clojure.core/inst-ms"        "Java inst? semantics"
- "clojure.core/uuid?"          "Java UUID class check"
- "clojure.core/bytes?"         "Java byte[] class check"
+ ;; class and type expose JVM-specific Class objects in their result;
+ ;; nothing we can byte-match. inst? / inst-ms / uuid? / bytes? are
+ ;; supported in mino with their own representations (component map
+ ;; for inst, MINO_UUID, MINO_BYTES) -- mino's print form differs
+ ;; from JVM's #object[java.util.UUID ...] shape so individual
+ ;; examples may still skip, but the predicates themselves are real.
  "clojure.core/class"          "Java class introspection"
  "clojure.core/type"           "Java class introspection"
 
@@ -137,27 +137,26 @@
  ;; not bugs in the var under test — mino just can't execute the
  ;; preamble. (A probe-side improvement to wrap each preamble form in
  ;; a try-catch is tracked separately.)
+ ;; (new X) constructor syntax is JVM-only; the JVM Class/Member
+ ;; static-resolution surface that mino added in v0.412 covers the
+ ;; slash form (Long/MAX_VALUE, Math/sqrt, java.util.List/of, ...)
+ ;; but cannot resolve (new BoxedClass ...) since mino has no boxed
+ ;; wrapper classes. The rest of the comparisons / arithmetic in
+ ;; these examples work, only the preamble's (new ...) call fails.
  "clojure.core/boolean?:2"      "preamble uses (new Boolean ...)"
  "clojure.core/double?:1"       "preamble uses (new Double ...)"
  "clojure.core/int?:1"          "preamble uses java.lang.Integer."
- "clojure.core/int?:2"          "preamble: Long/MAX_VALUE etc."
- "clojure.core/bit-and:3"       "preamble: Integer/toBinaryString"
- "clojure.core/bit-and-not:0"   "preamble: Integer/toBinaryString"
- "clojure.core/bit-shift-right:1"          "byte sign-extension diverges"
- "clojure.core/unsigned-bit-shift-right:0" "byte sign-extension diverges"
- "clojure.core/=:4"             "preamble: Double/POSITIVE_INFINITY"
- "clojure.core/=:5"             "preamble: Double/POSITIVE_INFINITY"
- "clojure.core/=:6"             "preamble: Double/POSITIVE_INFINITY"
- "clojure.core/==:3"            "preamble: Double/POSITIVE_INFINITY"
- "clojure.core/+:5"             "preamble: Integer/MAX_VALUE"
+ ;; (* a-bigint) example pins JVM's BigInteger print form, which
+ ;; differs from mino's bigint print form by design.
  "clojure.core/*:5"             "(* a-bigint) requires bigint print suffix"
  "clojure.core/identical?:0"    "preamble: (String. \"abc\")"
  "clojure.core/identical?:1"    "preamble: (String. \"abc\")"
  "clojure.core/identical?:2"    "JVM string-pool semantics"
  "clojure.core/identical?:3"    "JVM string-pool semantics"
- "clojure.core/into:8"          "preamble: java.util.List/of"
- "clojure.core/into:9"          "preamble: java.util.Set/of"
- "clojure.core/into:10"         "preamble: java.util.Map/of"
+ ;; bit-shift-right on a byte sign-extends per Java; mino's int model
+ ;; sign-extends earlier, producing a different printed result.
+ "clojure.core/bit-shift-right:1"          "byte sign-extension diverges"
+ "clojure.core/unsigned-bit-shift-right:0" "byte sign-extension diverges"
 
  ;; --- Reader conditionals ---
  ;;
@@ -223,15 +222,11 @@
  "clojure.spec.alpha/map-of:4"        "map-of gen sample requires test.check"
  "clojure.spec.alpha/map-of:5"        "map-of gen sample requires test.check"
 
- ;; --- NaN? examples have Math/sqrt etc. in their preambles ---
+ ;; --- NaN? examples were pinned on Math/sqrt preambles ---
  ;;
- ;; The form itself works (uses ##Inf or clojure.math) but the
- ;; preamble references Java's Math/sqrt which mino can't run.
- "clojure.core/NaN?:0"            "preamble uses Math/sqrt"
- "clojure.core/NaN?:1"            "preamble uses Math/sqrt"
- "clojure.core/NaN?:2"            "preamble uses Math/sqrt"
- "clojure.core/NaN?:3"            "preamble uses Math/sqrt"
- "clojure.core/NaN?:4"            "preamble uses Math/sqrt"
+ ;; Math/sqrt and friends ship in v0.412 via the JVM static-statics
+ ;; surface, so these examples no longer require a preamble shim.
+ ;; Any remaining divergence is shape-only and lives elsewhere.
 
  ;; --- trampoline:2: bb-side has trailing commentary ---
  "clojure.core/trampoline:2"      "ground-truth includes ClojureDocs commentary"

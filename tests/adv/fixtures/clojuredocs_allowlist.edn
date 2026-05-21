@@ -217,10 +217,17 @@
  "clojure.core/float:2"           "float32 truncation"
  "clojure.core/unchecked-float:1" "float32 print form preserves IEEE-754 precision (mino) vs JVM trim"
  "clojure.core/unchecked-long:11" "bigint-just-below-LONG_MIN wrap; mino clamps to LONG_MIN, JVM takes low-64 bits"
- ;; --- spec.alpha map-of gen-backed examples (require test.check) ---
+ ;; --- spec.alpha gen-backed examples (require clojure.spec.gen.alpha) ---
+ ;;
+ ;; mino ships clojure.spec.alpha but not the test.check-backed
+ ;; clojure.spec.gen.alpha generator namespace. Examples that route
+ ;; through (-> spec s/gen g/generate) cannot run without it.
  "clojure.spec.alpha/map-of:3"        "map-of explain (#:clojure.spec.alpha map shape)"
  "clojure.spec.alpha/map-of:4"        "map-of gen sample requires test.check"
  "clojure.spec.alpha/map-of:5"        "map-of gen sample requires test.check"
+ "clojure.spec.alpha/with-gen"        "requires clojure.spec.gen.alpha"
+ "clojure.spec.alpha/conformer"       "requires clojure.spec.gen.alpha"
+ "clojure.spec.alpha/multi-spec"      "requires clojure.spec.gen.alpha"
 
  ;; --- NaN? examples were pinned on Math/sqrt preambles ---
  ;;

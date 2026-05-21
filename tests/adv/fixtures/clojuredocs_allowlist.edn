@@ -272,11 +272,6 @@
  "clojure.core/if-let:12"         "user macro if-let* with let-bindings shape"
  "clojure.core/if-let:13"         "user macro if-let* with let-bindings shape"
 
- ;; --- merge-with: mino rejects non-map args; JVM passes-through single
- ;;     non-map. The deep-merge idiom in the corpus relies on this. ---
- "clojure.core/merge:3"           "merge-with stricter on non-map args"
- "clojure.core/merge:4"           "merge-with stricter on non-map args"
-
  ;; --- mapv:5 forces `(map println [1 2 3])` whose realization order
  ;;     interleaves with the print of the result.
  "clojure.core/mapv:5"            "lazy-seq print interleaves with side effects"

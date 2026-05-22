@@ -32,6 +32,7 @@
 (def mino-bin (or (getenv "MINO_BIN") "mino/mino"))
 
 (def fixture-path "tests/adv/fixtures/clojuredocs-tuples.edn")
+(def jvm-fixture-path "tests/adv/fixtures/clojuredocs-jvm-tuples.edn")
 (def allowlist-path "tests/adv/fixtures/clojuredocs_allowlist.edn")
 
 (def n-examples
@@ -75,6 +76,17 @@
       (println "ERROR: failed to read fixture at" fixture-path ":" (str e))
       (println "Did you run `./mino/mino task clojuredocs-refresh` to build it?")
       (exit 2))))
+
+(defn- load-jvm-fixture
+  "JVM Clojure ground truth recorded by tests/adv/clojuredocs_jvm_capture.clj.
+   Optional -- if absent (or unreadable) the probe falls back to bb-only
+   ground truth and matches the historical behaviour. Returns
+   `{key {:status :ok :jvm-out \"...\"} ...}` or {} when not available."
+  []
+  (try
+    (let [m (read-string (slurp jvm-fixture-path))]
+      (or (:outputs m) {}))
+    (catch e {})))
 
 (defn- load-allowlist []
   (try
@@ -151,27 +163,37 @@
     (or (get allow ek) (get allow vk))))
 
 (defn- compare-one
-  "Run one tuple through mino, compare to recorded bb output.
-   Returns {:status :pass|:fail|:mino-fail|:allowlisted, ...}."
-  [allow key tuple]
-  (let [expected (:bb-out (:gt tuple))
-        reason (allow-reason allow tuple)
+  "Run one tuple through mino, compare to recorded ground truth.
+   bb-ground-truth is primary; if a JVM-Clojure fixture is available, a
+   match against either bb-out OR jvm-out counts as :pass. When bb and
+   jvm disagree and mino matches jvm but not bb, that's still a pass
+   (and a noteworthy bb-vs-jvm quirk). Returns
+   {:status :pass|:fail|:mino-fail|:allowlisted, ...}."
+  [allow jvm-fx key tuple]
+  (let [bb-exp   (:bb-out (:gt tuple))
+        jvm-rec  (get jvm-fx key)
+        jvm-exp  (when (= :ok (:status jvm-rec)) (:jvm-out jvm-rec))
+        reason   (allow-reason allow tuple)
         {:keys [exit out err]} (when-not reason (run-mino tuple))
-        actual out]
+        actual   out
+        actual-n (norm actual)
+        bb-n     (norm bb-exp)
+        jvm-n    (norm jvm-exp)]
     (cond
       reason
       {:status :allowlisted :reason reason}
 
       (not (zero? exit))
-      {:status :mino-fail :exit exit :err err :expected expected
-       :tuple tuple}
+      {:status :mino-fail :exit exit :err err :expected bb-exp
+       :jvm-expected jvm-exp :tuple tuple}
 
-      (= (norm actual) (norm expected))
+      (or (= actual-n bb-n)
+          (and jvm-n (= actual-n jvm-n)))
       {:status :pass}
 
       :else
-      {:status :fail :expected expected :actual actual
-       :tuple tuple})))
+      {:status :fail :expected bb-exp :jvm-expected jvm-exp
+       :actual actual :tuple tuple})))
 
 ;; --- main loop ---
 
@@ -200,8 +222,10 @@
                  ";; ns=" (:ns tuple) " var=" (:var-name tuple)
                  " idx=" (:idx tuple) "\n"
                  ";;\n"
-                 ";; Expected (bb / JVM Clojure):\n"
+                 ";; Expected (bb):\n"
                  ";;   " (pr-str (:expected result)) "\n"
+                 ";; Expected (JVM Clojure):\n"
+                 ";;   " (pr-str (:jvm-expected result)) "\n"
                  ";; Actual (mino):\n"
                  ";;   " (pr-str (:actual result)) "\n"
                  ";;\n"
@@ -227,7 +251,12 @@
 
 (let [start (now-ms)
       data (load-fixture)
+      jvm-fx (load-jvm-fixture)
       allow (load-allowlist)
+      _ (println "[diff-clojuredocs] jvm-ground-truth:"
+                 (if (seq jvm-fx)
+                   (str (count jvm-fx) " tuples")
+                   "(absent -- using bb-only)"))
       all-ok (->> (:tuples data)
                   (filter #(= :ok (:status (:gt %))))
                   assign-indices)
@@ -242,7 +271,7 @@
                      :failures []})]
   (doseq [t selected]
     (let [k (key-of t)
-          r (compare-one allow k t)]
+          r (compare-one allow jvm-fx k t)]
       (case (:status r)
         :pass        (swap! results update :pass inc)
         :allowlisted (swap! results update :allowlisted inc)
@@ -253,7 +282,8 @@
                          (emit-verdict "diff-clojuredocs.divergence"
                                        "fail"
                                        :key k
-                                       :expected (:expected r)
+                                       :bb-expected (:expected r)
+                                       :jvm-expected (:jvm-expected r)
                                        :actual (:actual r)))
         :mino-fail   (do (swap! results #(-> %
                                               (update :mino-fail inc)

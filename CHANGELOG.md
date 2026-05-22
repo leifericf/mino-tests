@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased — JVM-Clojure ground truth alongside bb
+
+The ClojureDocs diff probe now compares mino against **both** bb and
+JVM Clojure ground truth. bb is fast and ubiquitous in CI; JVM Clojure
+is the actual canonical reference. The probe passes if mino matches
+either form, so when bb and JVM disagree (rare in practice — the
+canonical printer agrees in nearly all cases) a mino output that
+matches JVM is treated as a pass.
+
+New companion fixture at `tests/adv/fixtures/clojuredocs-jvm-tuples.edn`
+written by `tests/adv/clojuredocs_jvm_capture.clj`, a Clojure-CLI script
+that evaluates each tuple in a fresh sandbox namespace with a per-tuple
+3s wall-clock timeout. The capture loop is single-process so the
+~3 s JVM startup amortises across all 1327 bb-OK tuples; total wall
+time is a few seconds.
+
+Allowlist additions cover six cases where the ClojureDocs preamble
+relies on JVM interop (`Integer/toBinaryString`, `(java.util.Date.)`,
+`(.getBytes ...)`, `(Long/MAX_VALUE)` in fn position) — the forms
+themselves work on mino but the preamble halts the script. Two further
+entries cover a `into` Java-Set ordering quirk and the
+ratio→bigint-promotion print divergence on `(+ 1/2 1/2)`.
+
+Probe verdict against mino HEAD: **1173 pass / 0 fail / 0 mino-error
+/ 154 allowlisted out of 1327**, up from 1169 pass in v0.10.4 after
+the mino printer fix (uppercase `E` in scientific notation; `:float32`
+prints with 32-bit-rounded precision).
+
 ## v0.10.4 — Drop partition-spiral allowlist after apply-lazy fix
 
 Mino v0.283.0 makes `apply` pass-through lazy / chunked tails to

@@ -304,4 +304,31 @@
  "clojure.core/get-in:0"          "preamble: java interop"
  "clojure.core/partial:15"        "preamble: java interop"
  "clojure.core/for:11"            "preamble: java interop"
+
+ ;; --- preamble depends on JVM interop not modelled on mino ---
+ ;;
+ ;; The probe runs preamble + form together, so a preamble that
+ ;; touches Integer/toBinaryString, (.getBytes ...), (java.util.Date.),
+ ;; or invokes Long/MAX_VALUE in fn position halts before the form
+ ;; runs. The forms themselves work on mino -- mino's bit-and,
+ ;; bit-and-not, int?, bytes? all match the recorded ground truth when
+ ;; exercised directly.
+ "clojure.core/inst-ms:0"         "preamble: (java.util.Date.)"
+ "clojure.core/bit-and-not:0"     "preamble: Integer/toBinaryString"
+ "clojure.core/bit-and:3"         "preamble: Integer/toBinaryString"
+ "clojure.core/int?:2"            "preamble: (Long/MAX_VALUE) in fn pos"
+ "clojure.core/bytes?:0"          "preamble: (.getBytes \"foo\")"
+ "clojure.core/bytes?:1"          "preamble: (.getBytes \"foo\")"
+
+ ;; --- set / map ordering and tower-promotion divergences ---
+ ;;
+ ;; `into:9` over a Java Set seeds the mino set in hash order from
+ ;; java.util.Set/of's iteration -- mino's HAMT and JVM's HashSet hash
+ ;; the same keywords to different buckets, so the iteration prints
+ ;; in a different order. The set contents are identical.
+ "clojure.core/into:9"            "set hash-iteration order differs from JVM"
+ ;; `+:5` is (+ 1/2 1/2). JVM Clojure promotes ratio addition to
+ ;; BigInt when the result is a whole number, printing "1N". mino has
+ ;; one integer tier and stays at :int -> prints "1".
+ "clojure.core/+:5"               "no JVM-style ratio->bigint promotion"
 }

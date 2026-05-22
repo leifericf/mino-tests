@@ -314,8 +314,6 @@
  ;; bit-and-not, int?, bytes? all match the recorded ground truth when
  ;; exercised directly.
  "clojure.core/inst-ms:0"         "preamble: (java.util.Date.)"
- "clojure.core/bit-and-not:0"     "preamble: Integer/toBinaryString"
- "clojure.core/bit-and:3"         "preamble: Integer/toBinaryString"
  "clojure.core/int?:2"            "preamble: (Long/MAX_VALUE) in fn pos"
  "clojure.core/bytes?:0"          "preamble: (.getBytes \"foo\")"
  "clojure.core/bytes?:1"          "preamble: (.getBytes \"foo\")"

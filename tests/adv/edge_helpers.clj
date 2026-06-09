@@ -66,15 +66,24 @@
   "mino: note: this build has the JIT compiled out")
 
 (defn- strip-jit-disabled-warning
-  "Drop the JIT-disabled-warning line from a captured stdout
-   string. No-op when the line isn't present."
+  "Drop the JIT-disabled-warning line from a captured output string,
+   preserving every other byte exactly -- including the program's own
+   trailing newline. mino's `sh` merges stderr into :out, so on a
+   JIT-compiled-out host the note lands in the captured output. A
+   split-lines/join round-trip silently drops the trailing newline
+   (split-lines discards the final empty field), which made every
+   program look like an on-vs-off divergence on such hosts. Instead
+   remove the line in place: from its start to and including its
+   terminating newline, leaving the rest untouched."
   [s]
   (if (and s (clojure.string/includes? s jit-disabled-warning-prefix))
+    ;; split with limit -1 keeps trailing empty fields, so a final "\n"
+    ;; survives the round-trip (plain split-lines / split would drop it).
     (clojure.string/join "\n"
       (filterv (fn [ln]
                  (not (clojure.string/includes? ln
                                                 jit-disabled-warning-prefix)))
-               (clojure.string/split-lines s)))
+               (clojure.string/split s "\n" -1)))
     s))
 
 (defn run-quad

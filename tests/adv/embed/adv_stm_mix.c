@@ -18,12 +18,12 @@
 static adv_verdict_t probe_stm_zero_sum(adv_probe_ctx_t *ctx) {
     /* Use a script-side STM workload -- the embedded C harness has
      * a one-state-per-thread contract, and we don't want to wrestle
-     * with mino_state_t cross-thread access here. Spawning futures
+     * with mino_state cross-thread access here. Spawning futures
      * from inside one state's script context is the supported path
      * for STM contention testing. */
-    mino_state_t *S = mino_state_new();
+    mino_state *S = mino_state_new();
     mino_set_thread_limit(S, 8);  /* allow worker threads */
-    mino_env_t *env = mino_env_new(S);
+    mino_env *env = mino_env_new(S);
     mino_install_all(S, env);
 
     const char *src =
@@ -37,7 +37,7 @@ static adv_verdict_t probe_stm_zero_sum(adv_probe_ctx_t *ctx) {
         "  (doseq [f inc-futs] @f)\n"
         "  (doseq [f dec-futs] @f)\n"
         "  @r)";
-    mino_val_t *r = mino_eval_string(S, src, env);
+    mino_val *r = mino_eval_string(S, src, env);
     adv_require(ctx, r != NULL);
     if (r) {
         long long out = 999;
@@ -50,9 +50,9 @@ static adv_verdict_t probe_stm_zero_sum(adv_probe_ctx_t *ctx) {
 }
 
 static adv_verdict_t probe_atom_contention(adv_probe_ctx_t *ctx) {
-    mino_state_t *S = mino_state_new();
+    mino_state *S = mino_state_new();
     mino_set_thread_limit(S, 8);
-    mino_env_t *env = mino_env_new(S);
+    mino_env *env = mino_env_new(S);
     mino_install_all(S, env);
     const char *src =
         "(let [a (atom 0)\n"
@@ -62,7 +62,7 @@ static adv_verdict_t probe_atom_contention(adv_probe_ctx_t *ctx) {
         "                    (future (dotimes [_ n] (swap! a inc)))))]\n"
         "  (doseq [f futs] @f)\n"
         "  @a)";
-    mino_val_t *r = mino_eval_string(S, src, env);
+    mino_val *r = mino_eval_string(S, src, env);
     adv_require(ctx, r != NULL);
     if (r) {
         long long out = 0;

@@ -14,6 +14,15 @@
 #ifndef MINO_TESTS_ADV_HARNESS_H
 #define MINO_TESTS_ADV_HARNESS_H
 
+/* clock_gettime / CLOCK_MONOTONIC are POSIX, hidden under a strict
+ * -std=c99 compile on glibc unless a feature-test macro is set before
+ * the first libc header. Every harness TU includes this header first,
+ * so defining it here covers them all (mirrors mino's own per-file
+ * convention, e.g. src/prim/proc.c). */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

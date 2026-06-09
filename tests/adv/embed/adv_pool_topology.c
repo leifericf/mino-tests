@@ -44,7 +44,7 @@ static adv_verdict_t probe_ring_long(adv_probe_ctx_t *ctx) {
     }
     /* Post 10 distinct ints to node 0, all traveling around the ring. */
     for (int i = 0; i < 10; i++) {
-        mino_val_t *v = mino_int(t.nodes[0].S, i);
+        mino_val *v = mino_int(t.nodes[0].S, i);
         adv_require(ctx, adv_topo_post(&t, 0, 1, v) == 0);
     }
     /* Step until quiescent. */
@@ -71,7 +71,7 @@ static adv_verdict_t probe_star(adv_probe_ctx_t *ctx) {
         return ADV_VERDICT_FAIL;
     /* Each spoke posts a message to the hub; hub forwards to next spoke. */
     for (int i = 1; i < 4; i++) {
-        mino_val_t *v = mino_int(t.nodes[i].S, i * 100);
+        mino_val *v = mino_int(t.nodes[i].S, i * 100);
         adv_require(ctx, adv_topo_post(&t, i, 0, v) == 0);
     }
     for (int s = 0; s < 30; s++) {
@@ -88,8 +88,8 @@ static adv_verdict_t probe_star(adv_probe_ctx_t *ctx) {
 
 static adv_verdict_t probe_pool_registered(adv_probe_ctx_t *ctx) {
     /* Register a host thread pool against a state; mino accepts it. */
-    mino_state_t *S = mino_state_new();
-    static mino_thread_pool_t pool = {.submit_fn = trivial_submit,
+    mino_state *S = mino_state_new();
+    static mino_thread_pool pool = {.submit_fn = trivial_submit,
                                       .user_data = NULL};
     mino_set_thread_pool(S, &pool);
     adv_json_emit(ctx, "stage", "pool_registered");

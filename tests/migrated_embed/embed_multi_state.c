@@ -1,8 +1,8 @@
 /*
  * embed_multi_state.c -- 16 states x 16 pthreads stress test.
  *
- * Guarantees under test (Phase 4 "one mino_state_t per thread" story):
- *   - A mino_state_t is wholly self-contained: no cross-state globals,
+ * Guarantees under test (Phase 4 "one mino_state per thread" story):
+ *   - A mino_state is wholly self-contained: no cross-state globals,
  *     no shared intern tables, no shared schedulers, no shared GC. An
  *     embedder may create one per thread and run them in parallel
  *     without locks, as long as no single state is touched by more
@@ -11,7 +11,7 @@
  *     stay consistent under sustained allocation pressure driven from
  *     16 concurrent threads.
  *
- * Shape: each worker thread owns one mino_state_t + env, evaluates a
+ * Shape: each worker thread owns one mino_state + env, evaluates a
  * workload that forces minor + major collections, reads back results
  * via a known-value check, and exits with a per-thread failure count.
  * The main thread sums the counts; exit 0 means every worker saw what
@@ -53,9 +53,9 @@ typedef struct {
 static void *worker_main(void *arg)
 {
     worker_ctx_t *ctx = (worker_ctx_t *)arg;
-    mino_state_t *S;
-    mino_env_t   *env;
-    mino_val_t   *result;
+    mino_state *S;
+    mino_env   *env;
+    mino_val   *result;
     long long     n = 0;
 
     S = mino_state_new();

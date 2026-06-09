@@ -23,7 +23,7 @@ static adv_verdict_t probe_ring_smoke(adv_probe_ctx_t *ctx) {
     adv_json_emit(ctx, "stage", "built_ring_3");
 
     /* Post an int value at node 0. */
-    mino_val_t *v = mino_int(t.nodes[0].S, 42);
+    mino_val *v = mino_int(t.nodes[0].S, 42);
     int rc = adv_topo_post(&t, 0, 1, v);
     adv_require(ctx, rc == 0);
 

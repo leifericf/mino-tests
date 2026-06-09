@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 static adv_verdict_t probe_state_roundtrip(adv_probe_ctx_t *ctx) {
-    mino_state_t *S = mino_state_new();
+    mino_state *S = mino_state_new();
     adv_require(ctx, S != NULL);
     if (S) {
         adv_json_emit(ctx, "stage", "state_new_ok");

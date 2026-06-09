@@ -24,8 +24,8 @@ static int node_init(adv_topo_node_t *node, int idx) {
         return 1;
     }
     node->inbox_max    = ADV_TOPO_INBOX_DEFAULT;
-    node->inbox        = (mino_val_t **)calloc(node->inbox_max,
-                                               sizeof(mino_val_t *));
+    node->inbox        = (mino_val **)calloc(node->inbox_max,
+                                               sizeof(mino_val *));
     if (!node->inbox) {
         pthread_mutex_destroy(&node->lock);
         mino_state_free(node->S);
@@ -93,7 +93,7 @@ void adv_topo_destroy(adv_topo_t *t) {
 }
 
 int adv_topo_post(adv_topo_t *t, int src_idx, int dst_idx,
-                  mino_val_t *val) {
+                  mino_val *val) {
     if (src_idx < 0 || src_idx >= t->n) return 1;
     if (dst_idx < 0 || dst_idx >= t->n) return 1;
     if (src_idx == dst_idx)             return 1;
@@ -103,7 +103,7 @@ int adv_topo_post(adv_topo_t *t, int src_idx, int dst_idx,
     /* Clone under the destination's lock so its GC roots don't move
      * underneath the clone walk. */
     pthread_mutex_lock(&dst->lock);
-    mino_val_t *cloned = mino_clone(dst->S, src->S, val);
+    mino_val *cloned = mino_clone(dst->S, src->S, val);
     if (cloned == NULL) {
         pthread_mutex_unlock(&dst->lock);
         return 2;
@@ -121,7 +121,7 @@ int adv_topo_step(adv_topo_t *t) {
     int forwarded = 0;
     for (int i = 0; i < t->n; i++) {
         adv_topo_node_t *node = &t->nodes[i];
-        mino_val_t *msg = NULL;
+        mino_val *msg = NULL;
         pthread_mutex_lock(&node->lock);
         if (node->inbox_count > 0) {
             msg = node->inbox[0];

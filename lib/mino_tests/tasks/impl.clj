@@ -98,14 +98,16 @@
 ;; harness shares the same compile units.
 
 ;; The lib-srcs list mirrors mino's own lib/mino/tasks/builtin.clj
-;; lib-srcs at v0.252.3 -- intentionally inlined so a mino API drift
-;; surfaces here as a build break rather than silently linking
-;; against an older surface.
+;; lib-srcs -- intentionally inlined so a mino API drift surfaces here
+;; as a build break rather than silently linking against an older
+;; surface. Keep in sync with that list when mino adds/moves/splits a
+;; translation unit (last synced against mino's v0.423.x lib-srcs).
 (def mino-lib-srcs
   ["src/eval/eval.c" "src/diag/diag.c" "src/eval/special.c"
    "src/eval/special_registry.c" "src/eval/defs.c" "src/eval/bindings.c"
    "src/eval/control.c" "src/eval/fn.c" "src/eval/bc/vm.c"
-   "src/eval/bc/compile.c" "src/eval/bc/jit/entry.c"
+   "src/eval/bc/compile.c" "src/eval/bc/gc_handlers.c"
+   "src/eval/bc/jit/entry.c"
    "src/eval/bc/jit/stats.c" "src/eval/bc/jit/helpers.c"
    "src/eval/bc/jit/patcher.c" "src/eval/bc/jit/patcher_x86_64.c"
    "src/eval/bc/jit/emit.c" "src/runtime/state.c" "src/runtime/var.c"
@@ -114,22 +116,33 @@
    "src/runtime/capabilities.c" "src/gc/driver.c" "src/gc/roots.c"
    "src/gc/major.c" "src/gc/barrier.c" "src/gc/minor.c"
    "src/gc/trace.c" "src/gc/profile.c" "src/runtime/module.c"
-   "src/public/gc.c" "src/public/embed.c" "src/collections/val.c"
+   "src/public/gc.c" "src/public/embed.c"
+   "src/values/val.c" "src/values/gc_handlers.c"
    "src/collections/vec.c" "src/collections/map.c"
-   "src/collections/chunk.c" "src/collections/rbtree.c"
-   "src/collections/builders.c" "src/collections/iter.c"
+   "src/collections/chunk.c" "src/collections/queue.c"
+   "src/collections/bytes.c"
+   "src/collections/rbtree.c"
+   "src/collections/builders.c" "src/collections/gc_handlers.c"
+   "src/collections/iter.c"
    "src/eval/read.c" "src/eval/print.c" "src/prim/prim.c"
    "src/prim/install.c" "src/prim/install_stdlib.c"
-   "src/prim/numeric.c" "src/prim/collections.c"
-   "src/prim/sequences.c" "src/prim/lazy.c" "src/prim/string.c"
+   "src/prim/numeric.c" "src/prim/numeric_math.c"
+   "src/prim/numeric_bit.c" "src/prim/numeric_coerce.c"
+   "src/prim/collections.c" "src/prim/collections_transient.c"
+   "src/prim/bits.c"
+   "src/prim/sequences.c" "src/prim/sequences_seq.c" "src/prim/lazy.c"
+   "src/prim/string.c"
    "src/prim/io.c" "src/prim/reflection.c" "src/prim/meta.c"
    "src/prim/regex.c" "src/prim/stateful.c" "src/prim/stm.c"
    "src/prim/agent.c" "src/prim/module.c" "src/prim/ns.c"
    "src/prim/fs.c" "src/prim/proc.c" "src/prim/host.c"
-   "src/interop/syntax.c" "src/collections/clone.c"
+   "src/prim/jvm_statics.c" "src/interop/syntax.c"
+   "src/collections/clone.c"
    "src/regex/re.c" "src/collections/transient.c"
-   "src/async/scheduler.c" "src/async/timer.c" "src/prim/async.c"
-   "src/prim/bignum.c" "src/vendor/imath/imath.c"])
+   "src/async/scheduler.c" "src/async/timer.c" "src/async/chan.c"
+   "src/prim/async.c"
+   "src/prim/bignum.c" "src/prim/ratio.c" "src/prim/bigdec.c"
+   "src/vendor/imath/imath.c"])
 
 (defn- src->obj [src]
   (str (subs src 0 (- (count src) 2)) ".o"))

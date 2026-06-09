@@ -45,8 +45,8 @@ static int failures = 0;
 
 /* --- transformers used by the alter_c / commute_c paths -------------- */
 
-static mino_val_t *xform_inc(mino_state_t *S, mino_val_t *cur,
-                              void *user, mino_env_t *env)
+static mino_val *xform_inc(mino_state *S, mino_val *cur,
+                              void *user, mino_env *env)
 {
     long long n;
     long long step = (long long)(intptr_t)user;
@@ -55,8 +55,8 @@ static mino_val_t *xform_inc(mino_state_t *S, mino_val_t *cur,
     return mino_int(S, n + step);
 }
 
-static mino_val_t *xform_double(mino_state_t *S, mino_val_t *cur,
-                                 void *user, mino_env_t *env)
+static mino_val *xform_double(mino_state *S, mino_val *cur,
+                                 void *user, mino_env *env)
 {
     long long n;
     (void)user;
@@ -68,14 +68,14 @@ static mino_val_t *xform_double(mino_state_t *S, mino_val_t *cur,
 /* --- transaction bodies ---------------------------------------------- */
 
 struct body_basic_ctx {
-    mino_val_t *r;
+    mino_val *r;
     long long   final;
 };
 
-static mino_val_t *body_basic(mino_state_t *S, void *user, mino_env_t *env)
+static mino_val *body_basic(mino_state *S, void *user, mino_env *env)
 {
     struct body_basic_ctx *c = (struct body_basic_ctx *)user;
-    mino_val_t *v;
+    mino_val *v;
     long long   inside;
     /* deref records a read */
     v = mino_tx_ref_deref(S, c->r);
@@ -98,19 +98,19 @@ static mino_val_t *body_basic(mino_state_t *S, void *user, mino_env_t *env)
     return v;
 }
 
-struct body_refset_ctx { mino_val_t *r; };
+struct body_refset_ctx { mino_val *r; };
 
-static mino_val_t *body_refset(mino_state_t *S, void *user, mino_env_t *env)
+static mino_val *body_refset(mino_state *S, void *user, mino_env *env)
 {
     struct body_refset_ctx *c = (struct body_refset_ctx *)user;
     (void)env;
     return mino_tx_ref_set(S, c->r, mino_int(S, 99));
 }
 
-struct body_commute_only_ctx { mino_val_t *r; };
+struct body_commute_only_ctx { mino_val *r; };
 
-static mino_val_t *body_commute_only(mino_state_t *S, void *user,
-                                      mino_env_t *env)
+static mino_val *body_commute_only(mino_state *S, void *user,
+                                      mino_env *env)
 {
     struct body_commute_only_ctx *c = (struct body_commute_only_ctx *)user;
     return mino_tx_commute_c(S, c->r, xform_inc, (void *)(intptr_t)1, env);
@@ -118,9 +118,9 @@ static mino_val_t *body_commute_only(mino_state_t *S, void *user,
 
 /* --- tests ----------------------------------------------------------- */
 
-static void test_predicate_and_construction(mino_state_t *S)
+static void test_predicate_and_construction(mino_state *S)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     REQUIRE(r != NULL, "mino_tx_ref returned NULL");
     REQUIRE(mino_is_tx_ref(r), "mino_is_tx_ref(ref) == 0");
     REQUIRE(!mino_is_tx_ref(NULL), "mino_is_tx_ref(NULL) != 0");
@@ -130,7 +130,7 @@ static void test_predicate_and_construction(mino_state_t *S)
 
     /* Outside-tx deref: returns committed value, no bookkeeping. */
     {
-        mino_val_t *v = mino_tx_ref_deref(S, r);
+        mino_val *v = mino_tx_ref_deref(S, r);
         long long   n;
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 0,
                 "outside-tx deref didn't return committed 0");
@@ -140,11 +140,11 @@ static void test_predicate_and_construction(mino_state_t *S)
             "deref(int) should return NULL");
 }
 
-static void test_run_basic(mino_state_t *S, mino_env_t *env)
+static void test_run_basic(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     struct body_basic_ctx ctx = { r, 0 };
-    mino_val_t *result = mino_tx_run(S, body_basic, &ctx, env);
+    mino_val *result = mino_tx_run(S, body_basic, &ctx, env);
     long long n;
 
     REQUIRE(result != NULL, "mino_tx_run(body_basic) returned NULL");
@@ -152,29 +152,29 @@ static void test_run_basic(mino_state_t *S, mino_env_t *env)
 
     /* After commit, deref outside the tx must show the committed value. */
     {
-        mino_val_t *v = mino_tx_ref_deref(S, r);
+        mino_val *v = mino_tx_ref_deref(S, r);
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 10,
                 "post-commit committed value != 10");
     }
 }
 
-static void test_run_refset(mino_state_t *S, mino_env_t *env)
+static void test_run_refset(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     struct body_refset_ctx ctx = { r };
     long long n;
-    mino_val_t *result = mino_tx_run(S, body_refset, &ctx, env);
+    mino_val *result = mino_tx_run(S, body_refset, &ctx, env);
     REQUIRE(result != NULL, "mino_tx_run(body_refset) returned NULL");
     REQUIRE(mino_to_int(mino_tx_ref_deref(S, r), &n) && n == 99,
             "post-commit committed value != 99");
 }
 
-static void test_run_commute_only(mino_state_t *S, mino_env_t *env)
+static void test_run_commute_only(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 7));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 7));
     struct body_commute_only_ctx ctx = { r };
     long long n;
-    mino_val_t *result = mino_tx_run(S, body_commute_only, &ctx, env);
+    mino_val *result = mino_tx_run(S, body_commute_only, &ctx, env);
     REQUIRE(result != NULL, "mino_tx_run(body_commute_only) returned NULL");
     /* Commute-only goes through the log. Replayed at commit against
      * the latest committed value (7) -> 8. */
@@ -182,14 +182,14 @@ static void test_run_commute_only(mino_state_t *S, mino_env_t *env)
             "commute-only post-commit value != 8");
 }
 
-static void test_outside_tx_throws(mino_state_t *S, mino_env_t *env)
+static void test_outside_tx_throws(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     /* mino_tx_ref_set outside any tx must throw MST002. The throw
      * pops out via the eval-loop's diagnostic; mino_last_error
      * carries the message. */
     {
-        mino_val_t *v = mino_tx_ref_set(S, r, mino_int(S, 1));
+        mino_val *v = mino_tx_ref_set(S, r, mino_int(S, 1));
         REQUIRE(v == NULL, "outside-tx ref-set should return NULL");
     }
     {
@@ -198,21 +198,21 @@ static void test_outside_tx_throws(mino_state_t *S, mino_env_t *env)
                 "outside-tx ref-set error did not mention 'No transaction'");
     }
     {
-        mino_val_t *v = mino_tx_alter_c(S, r, xform_inc,
+        mino_val *v = mino_tx_alter_c(S, r, xform_inc,
                                          (void *)(intptr_t)1, env);
         REQUIRE(v == NULL, "outside-tx alter_c should return NULL");
     }
     {
-        mino_val_t *v = mino_tx_ensure(S, r, env);
+        mino_val *v = mino_tx_ensure(S, r, env);
         REQUIRE(v == NULL, "outside-tx ensure should return NULL");
     }
 }
 
-static void test_type_check_throws(mino_state_t *S, mino_env_t *env)
+static void test_type_check_throws(mino_state *S, mino_env *env)
 {
-    mino_val_t *not_a_ref = mino_int(S, 42);
+    mino_val *not_a_ref = mino_int(S, 42);
     {
-        mino_val_t *v = mino_tx_ref_set(S, not_a_ref, mino_int(S, 1));
+        mino_val *v = mino_tx_ref_set(S, not_a_ref, mino_int(S, 1));
         REQUIRE(v == NULL, "ref_set(int) should return NULL");
     }
     {
@@ -221,7 +221,7 @@ static void test_type_check_throws(mino_state_t *S, mino_env_t *env)
                 "ref_set(int) error should mention 'ref'");
     }
     {
-        mino_val_t *v = mino_tx_alter_c(S, not_a_ref, xform_inc,
+        mino_val *v = mino_tx_alter_c(S, not_a_ref, xform_inc,
                                          (void *)(intptr_t)1, env);
         REQUIRE(v == NULL, "alter_c(int) should return NULL");
     }
@@ -230,9 +230,9 @@ static void test_type_check_throws(mino_state_t *S, mino_env_t *env)
 /* Verify watches registered from Clojure fire after a C-side tx
  * commits. Uses the standalone binary's eval path to install the
  * watch and read its observed value back. */
-static void test_watch_fires_from_c_tx(mino_state_t *S, mino_env_t *env)
+static void test_watch_fires_from_c_tx(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     struct body_basic_ctx ctx = { r, 0 };
     long long n;
 
@@ -255,7 +255,7 @@ static void test_watch_fires_from_c_tx(mino_state_t *S, mino_env_t *env)
 
     /* Read the side atom from Clojure to confirm watch saw 10. */
     {
-        mino_val_t *v = mino_eval_string(S, "@*c-stm-seen*", env);
+        mino_val *v = mino_eval_string(S, "@*c-stm-seen*", env);
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 10,
                 "watch did not observe committed value 10");
     }
@@ -270,13 +270,13 @@ static void test_watch_fires_from_c_tx(mino_state_t *S, mino_env_t *env)
  * one increment per call regardless of how many retry attempts the
  * runner went through. */
 struct retry_body_ctx {
-    mino_val_t *ref;
+    mino_val *ref;
     long long   step;
     int         attempts;  /* observed by the body per re-invocation */
 };
 
-static mino_val_t *retry_body_xform(mino_state_t *S, mino_val_t *cur,
-                                     void *user, mino_env_t *env)
+static mino_val *retry_body_xform(mino_state *S, mino_val *cur,
+                                     void *user, mino_env *env)
 {
     long long n;
     long long step = (long long)(intptr_t)user;
@@ -285,7 +285,7 @@ static mino_val_t *retry_body_xform(mino_state_t *S, mino_val_t *cur,
     return mino_int(S, n + step);
 }
 
-static mino_val_t *retry_body(mino_state_t *S, void *user, mino_env_t *env)
+static mino_val *retry_body(mino_state *S, void *user, mino_env *env)
 {
     struct retry_body_ctx *ctx = (struct retry_body_ctx *)user;
     /* Each invocation (including retries) sees the same step from
@@ -298,16 +298,16 @@ static mino_val_t *retry_body(mino_state_t *S, void *user, mino_env_t *env)
 
 static struct retry_body_ctx *g_retry_ctx_for_prim;
 
-static mino_val_t *prim_c_incr_ref(mino_state_t *S, mino_val_t *args,
-                                    mino_env_t *env)
+static mino_val *prim_c_incr_ref(mino_state *S, mino_val *args,
+                                    mino_env *env)
 {
     (void)args;
     return mino_tx_run(S, retry_body, g_retry_ctx_for_prim, env);
 }
 
-static void test_run_retry_under_contention(mino_state_t *S, mino_env_t *env)
+static void test_run_retry_under_contention(mino_state *S, mino_env *env)
 {
-    mino_val_t *r = mino_tx_ref(S, mino_int(S, 0));
+    mino_val *r = mino_tx_ref(S, mino_int(S, 0));
     struct retry_body_ctx body_ctx = { r, 1, 0 };
     long long  n = 0;
     long long  per_thread = 200;
@@ -337,7 +337,7 @@ static void test_run_retry_under_contention(mino_state_t *S, mino_env_t *env)
         workers, per_thread);
 
     {
-        mino_val_t *result = mino_eval_string(S, script, env);
+        mino_val *result = mino_eval_string(S, script, env);
         REQUIRE(result != NULL, "retry: futures-driven eval returned NULL");
         if (result == NULL) {
             fprintf(stderr, "retry: error: %s\n", mino_last_error(S));
@@ -357,14 +357,14 @@ static void test_run_retry_under_contention(mino_state_t *S, mino_env_t *env)
             "retry: attempts < successful commits");
 }
 
-/* Pass a ref allocated in another mino_state_t to S's mino_tx_*
+/* Pass a ref allocated in another mino_state to S's mino_tx_*
  * entries. Each must throw eval/state MST007 ("ref from foreign
  * state") rather than silently mutate the foreign heap. */
-static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
+static void test_cross_state_ref_throws(mino_state *S, mino_env *env)
 {
-    mino_state_t *S2     = mino_state_new();
-    mino_env_t   *env2   = mino_env_new_default(S2);
-    mino_val_t   *foreign_r = mino_tx_ref(S2, mino_int(S2, 0));
+    mino_state *S2     = mino_state_new();
+    mino_env   *env2   = mino_env_new_default(S2);
+    mino_val   *foreign_r = mino_tx_ref(S2, mino_int(S2, 0));
     const char   *err;
 
     /* deref returns NULL but does not throw (the public deref tolerates
@@ -375,7 +375,7 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
 
     /* ref_set must throw MST007. */
     {
-        mino_val_t *v = mino_tx_ref_set(S, foreign_r, mino_int(S, 1));
+        mino_val *v = mino_tx_ref_set(S, foreign_r, mino_int(S, 1));
         REQUIRE(v == NULL, "cross-state ref_set should return NULL");
         err = mino_last_error(S);
         REQUIRE(err != NULL && strstr(err, "foreign state") != NULL,
@@ -384,7 +384,7 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
 
     /* alter_c must throw MST007. */
     {
-        mino_val_t *v = mino_tx_alter_c(S, foreign_r, xform_inc,
+        mino_val *v = mino_tx_alter_c(S, foreign_r, xform_inc,
                                          (void *)(intptr_t)1, env);
         REQUIRE(v == NULL, "cross-state alter_c should return NULL");
         err = mino_last_error(S);
@@ -394,7 +394,7 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
 
     /* commute_c must throw MST007. */
     {
-        mino_val_t *v = mino_tx_commute_c(S, foreign_r, xform_inc,
+        mino_val *v = mino_tx_commute_c(S, foreign_r, xform_inc,
                                            (void *)(intptr_t)1, env);
         REQUIRE(v == NULL, "cross-state commute_c should return NULL");
         err = mino_last_error(S);
@@ -404,7 +404,7 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
 
     /* ensure must throw MST007. */
     {
-        mino_val_t *v = mino_tx_ensure(S, foreign_r, env);
+        mino_val *v = mino_tx_ensure(S, foreign_r, env);
         REQUIRE(v == NULL, "cross-state ensure should return NULL");
         err = mino_last_error(S);
         REQUIRE(err != NULL && strstr(err, "foreign state") != NULL,
@@ -414,7 +414,7 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
     /* The foreign state's own ref operations still work normally. */
     {
         long long n;
-        mino_val_t *v = mino_tx_ref_deref(S2, foreign_r);
+        mino_val *v = mino_tx_ref_deref(S2, foreign_r);
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 0,
                 "foreign state's own ref should still read");
     }
@@ -430,11 +430,11 @@ static void test_cross_state_ref_throws(mino_state_t *S, mino_env_t *env)
  *
  * Agents are an opt-in install so the test installs them on S
  * itself; the foreign agent comes from a fresh S2. */
-static void test_cross_state_agent_throws(mino_state_t *S, mino_env_t *env)
+static void test_cross_state_agent_throws(mino_state *S, mino_env *env)
 {
-    mino_state_t *S2     = mino_state_new();
-    mino_env_t   *env2   = mino_env_new_default(S2);
-    mino_val_t   *foreign_a;
+    mino_state *S2     = mino_state_new();
+    mino_env   *env2   = mino_env_new_default(S2);
+    mino_val   *foreign_a;
     const char   *err;
     static const char *const probes[] = {
         "(send *foreign-agent* inc)",
@@ -467,7 +467,7 @@ static void test_cross_state_agent_throws(mino_state_t *S, mino_env_t *env)
     mino_env_set(S, env, "*foreign-agent*", foreign_a);
 
     for (i = 0; i < sizeof(probes) / sizeof(probes[0]); i++) {
-        mino_val_t *r = mino_eval_string(S, probes[i], env);
+        mino_val *r = mino_eval_string(S, probes[i], env);
         REQUIRE(r == NULL, "cross-state agent op should error (returned non-NULL)");
         err = mino_last_error(S);
         REQUIRE(err != NULL && strstr(err, "foreign state") != NULL,
@@ -496,13 +496,13 @@ static void test_cross_state_agent_throws(mino_state_t *S, mino_env_t *env)
  * poisoning the rest of the suite. */
 static void test_shutdown_agents_seals_state(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new_default(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new_default(S);
     mino_set_thread_limit(S, 2);
     mino_install_agent(S, env);
     {
         /* Pre-shutdown: send works. */
-        mino_val_t *r = mino_eval_string(S,
+        mino_val *r = mino_eval_string(S,
             "(let [a (agent 0)] (send a inc) (await a) @a)", env);
         long long n = 0;
         REQUIRE(r != NULL && mino_to_int(r, &n) && n == 1,
@@ -510,13 +510,13 @@ static void test_shutdown_agents_seals_state(void)
     }
     {
         /* Trigger shutdown. */
-        mino_val_t *r = mino_eval_string(S, "(shutdown-agents)", env);
+        mino_val *r = mino_eval_string(S, "(shutdown-agents)", env);
         REQUIRE(r != NULL, "shutdown-agents returned NULL");
     }
     {
         /* Post-shutdown: send must throw MST008. */
         const char *err;
-        mino_val_t *r = mino_eval_string(S,
+        mino_val *r = mino_eval_string(S,
             "(send (agent 0) inc)", env);
         REQUIRE(r == NULL, "post-shutdown send should error");
         err = mino_last_error(S);
@@ -525,7 +525,7 @@ static void test_shutdown_agents_seals_state(void)
     }
     {
         /* Idempotent: calling shutdown again is fine. */
-        mino_val_t *r = mino_eval_string(S, "(shutdown-agents)", env);
+        mino_val *r = mino_eval_string(S, "(shutdown-agents)", env);
         REQUIRE(r != NULL, "second shutdown-agents should not error");
     }
     mino_env_free(S, env);
@@ -537,15 +537,15 @@ static void test_shutdown_agents_seals_state(void)
  * Detect and throw rather than self-deadlock. */
 static void test_shutdown_agents_self_call_throws(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new_default(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new_default(S);
     mino_set_thread_limit(S, 2);
     mino_install_agent(S, env);
     {
         /* The action body calls shutdown-agents. The worker
          * catches the throw and the agent's value is set to a
          * sentinel; the agent itself stays clean. */
-        mino_val_t *r = mino_eval_string(S,
+        mino_val *r = mino_eval_string(S,
             "(let [a (agent 0)]"
             "  (send a (fn [_] (try (shutdown-agents) :unreachable"
             "                       (catch e :saw-throw))))"
@@ -563,8 +563,8 @@ static void test_shutdown_agents_self_call_throws(void)
 /* Sleep for N milliseconds inside an action, so an embed-side test
  * can block an agent's in-flight long enough to make await_for
  * actually time out. Registered in env as `test-sleep`. */
-static mino_val_t *prim_test_sleep(mino_state_t *S, mino_val_t *args,
-                                    mino_env_t *env)
+static mino_val *prim_test_sleep(mino_state *S, mino_val *args,
+                                    mino_env *env)
 {
     long long ms = 0;
     (void)env;
@@ -581,19 +581,19 @@ static mino_val_t *prim_test_sleep(mino_state_t *S, mino_val_t *args,
  * same way the Clojure-level prims are. */
 static void test_c_api_agents(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new_default(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new_default(S);
     mino_set_thread_limit(S, 4);
     mino_install_agent(S, env);
 
     /* Build (fn [v] (inc v)) once, reuse across sends. */
-    mino_val_t *inc_fn = mino_eval_string(S, "(fn [v] (inc v))", env);
+    mino_val *inc_fn = mino_eval_string(S, "(fn [v] (inc v))", env);
     REQUIRE(inc_fn != NULL, "inc fn should compile");
 
     /* mino_send: enqueue + await + read. */
     {
-        mino_val_t *a = mino_agent(S, mino_int(S, 0));
-        mino_val_t *agents[2];
+        mino_val *a = mino_agent(S, mino_int(S, 0));
+        mino_val *agents[2];
         REQUIRE(mino_send(S, a, inc_fn, NULL) != NULL,
                 "mino_send should return the agent");
         REQUIRE(mino_send(S, a, inc_fn, NULL) != NULL,
@@ -612,8 +612,8 @@ static void test_c_api_agents(void)
 
     /* mino_send_off: separate pool, same eval-lock serialization. */
     {
-        mino_val_t *a = mino_agent(S, mino_int(S, 100));
-        mino_val_t *agents[2];
+        mino_val *a = mino_agent(S, mino_int(S, 100));
+        mino_val *agents[2];
         REQUIRE(mino_send_off(S, a, inc_fn, NULL) != NULL,
                 "mino_send_off should return the agent");
         agents[0] = a; agents[1] = NULL;
@@ -629,8 +629,8 @@ static void test_c_api_agents(void)
     /* mino_await_for trivial path: zero in-flight means it returns 1
      * immediately without blocking. */
     {
-        mino_val_t *a = mino_agent(S, mino_int(S, 0));
-        mino_val_t *agents[2];
+        mino_val *a = mino_agent(S, mino_int(S, 0));
+        mino_val *agents[2];
         agents[0] = a; agents[1] = NULL;
         REQUIRE(mino_await_for(S, 50, agents) == 1,
                 "mino_await_for should return 1 when nothing is queued");
@@ -644,9 +644,9 @@ static void test_c_api_agents(void)
      * actually waits, and the cv broadcast on action completion
      * wakes the next await. */
     {
-        mino_val_t *a = mino_agent(S, mino_int(S, 0));
-        mino_val_t *agents[2];
-        mino_val_t *slow_fn;
+        mino_val *a = mino_agent(S, mino_int(S, 0));
+        mino_val *agents[2];
+        mino_val *slow_fn;
         mino_register_fn(S, env, "test-sleep", prim_test_sleep);
         slow_fn = mino_eval_string(S,
             "(fn [v] (test-sleep 250) (inc v))", env);
@@ -674,10 +674,10 @@ static void test_c_api_agents(void)
      * that rejects negatives, drive the agent into the failed
      * state, then restart with a clean value. */
     {
-        mino_val_t *a = mino_eval_string(S,
+        mino_val *a = mino_eval_string(S,
             "(agent 0 :validator (fn [v] (>= v 0)))", env);
-        mino_val_t *dec_fn = mino_eval_string(S, "(fn [v] (dec v))", env);
-        mino_val_t *agents[2];
+        mino_val *dec_fn = mino_eval_string(S, "(fn [v] (dec v))", env);
+        mino_val *agents[2];
         REQUIRE(a != NULL && mino_is_agent(a), "agent should be created");
         REQUIRE(mino_send(S, a, dec_fn, NULL) != NULL,
                 "send should accept the action even though it will fail");
@@ -702,9 +702,9 @@ static void test_c_api_agents(void)
     /* Cross-state guard: pass an agent from S2 to mino_send running
      * on S; must throw MST007 and return NULL. */
     {
-        mino_state_t *S2 = mino_state_new();
-        mino_env_t   *env2 = mino_env_new_default(S2);
-        mino_val_t   *foreign;
+        mino_state *S2 = mino_state_new();
+        mino_env   *env2 = mino_env_new_default(S2);
+        mino_val   *foreign;
         mino_set_thread_limit(S2, 2);
         mino_install_agent(S2, env2);
         foreign = mino_agent(S2, mino_int(S2, 0));
@@ -726,8 +726,8 @@ static void test_c_api_agents(void)
 
 int main(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new_default(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new_default(S);
 
     test_predicate_and_construction(S);
     test_run_basic(S, env);

@@ -32,7 +32,7 @@ static int failures = 0;
         }                                                          \
     } while (0)
 
-static int diag_contains(mino_state_t *S, const char *needle)
+static int diag_contains(mino_state *S, const char *needle)
 {
     const char *err = mino_last_error(S);
     if (err == NULL) return 0;
@@ -41,8 +41,8 @@ static int diag_contains(mino_state_t *S, const char *needle)
 
 static void test_minimal_floor(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new(S);
 
     mino_install_minimal(S, env);
 
@@ -60,14 +60,14 @@ static void test_minimal_floor(void)
     /* Floor numeric works without core.clj. */
     {
         long long n = 0;
-        mino_val_t *v = mino_eval_string(S, "(+ 1 2 3)", env);
+        mino_val *v = mino_eval_string(S, "(+ 1 2 3)", env);
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 6,
                 "floor (+ 1 2 3) returns 6");
     }
 
     /* re-find is unbound and reports the regex capability. */
     {
-        mino_val_t *v = mino_eval_string(S, "re-find", env);
+        mino_val *v = mino_eval_string(S, "re-find", env);
         REQUIRE(v == NULL, "re-find resolution without :regex returns NULL");
         REQUIRE(diag_contains(S, "capability 'regex' disabled by host"),
                 "re-find diagnostic mentions regex capability");
@@ -75,7 +75,7 @@ static void test_minimal_floor(void)
 
     /* slurp reports io. */
     {
-        mino_val_t *v = mino_eval_string(S, "slurp", env);
+        mino_val *v = mino_eval_string(S, "slurp", env);
         REQUIRE(v == NULL, "slurp resolution without :io returns NULL");
         REQUIRE(diag_contains(S, "capability 'io' disabled by host"),
                 "slurp diagnostic mentions io capability");
@@ -87,8 +87,8 @@ static void test_minimal_floor(void)
 
 static void test_minimal_plus_multimethods(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new(S);
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new(S);
 
     /* Install only the multimethods bit; protocols, transducers,
      * regex, bignum stay off. mino_install evaluates core.clj once the
@@ -104,7 +104,7 @@ static void test_minimal_plus_multimethods(void)
 
     /* defmulti is available since multimethods cap is on. */
     {
-        mino_val_t *v = mino_eval_string(S,
+        mino_val *v = mino_eval_string(S,
             "(defmulti shape :kind) (defmethod shape :default [x] :unknown) (shape {:kind :foo})",
             env);
         REQUIRE(v != NULL, "defmulti+defmethod works with multimethods on");
@@ -112,7 +112,7 @@ static void test_minimal_plus_multimethods(void)
 
     /* defprotocol is NOT available -- protocols cap is off. */
     {
-        mino_val_t *v = mino_eval_string(S, "defprotocol", env);
+        mino_val *v = mino_eval_string(S, "defprotocol", env);
         REQUIRE(v == NULL, "defprotocol resolution fails when :protocols off");
         REQUIRE(diag_contains(S, "capability 'protocols' disabled by host"),
                 "defprotocol diagnostic mentions protocols capability");
@@ -124,9 +124,9 @@ static void test_minimal_plus_multimethods(void)
 
 static void test_install_all(void)
 {
-    mino_state_t *S   = mino_state_new();
-    mino_env_t   *env = mino_env_new(S);
-    const mino_capability_info_t *p;
+    mino_state *S   = mino_state_new();
+    mino_env   *env = mino_env_new(S);
+    const mino_capability_info *p;
 
     mino_install_all(S, env);
 
@@ -137,14 +137,14 @@ static void test_install_all(void)
         REQUIRE(mino_capability_installed(S, p->bit), msg);
     }
     {
-        mino_val_t *v = mino_eval_string(S, "(re-find \"foo\" \"foobar\")",
+        mino_val *v = mino_eval_string(S, "(re-find \"foo\" \"foobar\")",
                                           env);
         REQUIRE(v != NULL,
                 "install_all enables re-find");
     }
     {
         long long n = 0;
-        mino_val_t *v = mino_eval_string(S, "(transduce (map inc) + 0 [1 2 3])",
+        mino_val *v = mino_eval_string(S, "(transduce (map inc) + 0 [1 2 3])",
                                           env);
         REQUIRE(v != NULL && mino_to_int(v, &n) && n == 9,
                 "install_all enables transduce");

@@ -1,7 +1,7 @@
 /*
  * topology.h -- cross-state topology helpers.
  *
- * Stand up small networks of mino_state_t instances communicating via
+ * Stand up small networks of mino_state instances communicating via
  * mino_clone-shaped messages. Used by embed probes to surface races,
  * deadlocks, and pathological slowdowns under concurrent access.
  *
@@ -40,11 +40,11 @@ typedef enum {
 
 typedef struct adv_topo_node {
     int                idx;
-    mino_state_t      *S;
+    mino_state      *S;
     pthread_mutex_t    lock;
     int                inbox_count;
     int                inbox_max;
-    mino_val_t       **inbox;       /* values cloned from peers */
+    mino_val       **inbox;       /* values cloned from peers */
     int                processed;   /* monotonic count */
 } adv_topo_node_t;
 
@@ -69,7 +69,7 @@ void adv_topo_destroy(adv_topo_t *t);
 /* Clone VAL from node SRC to node DST's inbox. Returns 0 on success,
  * non-zero if mino_clone returned NULL or DST's inbox is full. */
 int  adv_topo_post(adv_topo_t *t, int src_idx, int dst_idx,
-                   mino_val_t *val);
+                   mino_val *val);
 
 /* Run one "round" of message passing. For each node with a message in
  * its inbox, pop it and forward to t->next[i]. Returns the number of

@@ -22,7 +22,7 @@ static adv_verdict_t probe_stm_zero_sum(adv_probe_ctx_t *ctx) {
      * from inside one state's script context is the supported path
      * for STM contention testing. */
     mino_state *S = mino_state_new();
-    mino_set_thread_limit(S, 8);  /* allow worker threads */
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 8);  /* allow worker threads */
     mino_env *env = mino_env_new(S);
     mino_install_all(S, env);
 
@@ -51,7 +51,7 @@ static adv_verdict_t probe_stm_zero_sum(adv_probe_ctx_t *ctx) {
 
 static adv_verdict_t probe_atom_contention(adv_probe_ctx_t *ctx) {
     mino_state *S = mino_state_new();
-    mino_set_thread_limit(S, 8);
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 8);
     mino_env *env = mino_env_new(S);
     mino_install_all(S, env);
     const char *src =

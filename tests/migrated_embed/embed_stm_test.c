@@ -318,7 +318,7 @@ static void test_run_retry_under_contention(mino_state *S, mino_env *env)
      * a host that opts into multi-threading; the standalone ./mino
      * binary does this automatically, but a fresh embedder default
      * is thread_limit=1. */
-    mino_set_thread_limit(S, 4);
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 4);
 
     g_retry_ctx_for_prim = &body_ctx;
     mino_register_fn(S, env, "c-incr-ref!", prim_c_incr_ref);
@@ -458,7 +458,7 @@ static void test_cross_state_agent_throws(mino_state *S, mino_env *env)
      * S2 needs the same install so its own agent ops still work below.
      * Both states need a thread budget for async send to spawn its
      * worker (default thread_limit == 1 makes send throw MTH001). */
-    mino_set_thread_limit(S2, 2);
+    mino_set_option(S2, MINO_OPT_THREAD_LIMIT, 2);
     mino_install_agent(S, env);
     mino_install_agent(S2, env2);
     foreign_a = mino_agent(S2, mino_int(S2, 0));
@@ -498,7 +498,7 @@ static void test_shutdown_agents_seals_state(void)
 {
     mino_state *S   = mino_state_new();
     mino_env   *env = mino_env_new_default(S);
-    mino_set_thread_limit(S, 2);
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 2);
     mino_install_agent(S, env);
     {
         /* Pre-shutdown: send works. */
@@ -539,7 +539,7 @@ static void test_shutdown_agents_self_call_throws(void)
 {
     mino_state *S   = mino_state_new();
     mino_env   *env = mino_env_new_default(S);
-    mino_set_thread_limit(S, 2);
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 2);
     mino_install_agent(S, env);
     {
         /* The action body calls shutdown-agents. The worker
@@ -583,7 +583,7 @@ static void test_c_api_agents(void)
 {
     mino_state *S   = mino_state_new();
     mino_env   *env = mino_env_new_default(S);
-    mino_set_thread_limit(S, 4);
+    mino_set_option(S, MINO_OPT_THREAD_LIMIT, 4);
     mino_install_agent(S, env);
 
     /* Build (fn [v] (inc v)) once, reuse across sends. */
@@ -705,7 +705,7 @@ static void test_c_api_agents(void)
         mino_state *S2 = mino_state_new();
         mino_env   *env2 = mino_env_new_default(S2);
         mino_val   *foreign;
-        mino_set_thread_limit(S2, 2);
+        mino_set_option(S2, MINO_OPT_THREAD_LIMIT, 2);
         mino_install_agent(S2, env2);
         foreign = mino_agent(S2, mino_int(S2, 0));
         REQUIRE(mino_send(S, foreign, inc_fn, NULL) == NULL,

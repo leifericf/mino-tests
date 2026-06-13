@@ -79,3 +79,62 @@ jobs:
           name: diff-regressions-${{ matrix.os }}
           path: tests/adv/regressions/diff-*
           if-no-files-found: ignore
+
+  external-test-suite:
+    name: external-test-suite (clojure-test-suite)
+    runs-on: ubuntu-24.04
+    # Snapshot of jank-lang/clojure-test-suite run against the pinned
+    # mino submodule. Each .cljc file runs in its own ./mino sub-process
+    # under a 30s timeout (handled by the driver), so a segfault or hang
+    # in one file does not take down the rest. Informational: reports
+    # supported / failed / errored counts but does not gate merges. This
+    # lives here (not in the mino repo) because it depends on external
+    # tooling -- the mino vs mino-tests split this repo's README defines.
+    continue-on-error: true
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout (with submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout clojure-test-suite
+        uses: actions/checkout@v4
+        with:
+          repository: jank-lang/clojure-test-suite
+          path: clojure-test-suite
+
+      - name: Build mino (from submodule)
+        working-directory: mino
+        run: make
+
+      - name: Run external suite
+        working-directory: mino
+        # The driver expects the suite at ../clojure-test-suite (sibling
+        # of the mino dir). The checkout above places it at the workspace
+        # root, which is exactly that sibling of the mino submodule. tee
+        # the output so the next step can pull the summary without
+        # re-running the suite.
+        run: |
+          set -o pipefail
+          ./mino tests/clojure_test_suite.clj 2>&1 \
+            | tee /tmp/external_suite.log
+
+      - name: Surface aggregate counts
+        # Pull the summary block out of the captured log and post it as
+        # the job summary so the Actions UI shows pass / fail counts
+        # without scrolling.
+        if: always()
+        run: |
+          {
+            echo "## External test suite summary"
+            echo ''
+            echo '```'
+            sed -n '/EXTERNAL TEST SUITE REPORT/,/Per-file raw results/p' \
+              /tmp/external_suite.log 2>/dev/null \
+              | head -100 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

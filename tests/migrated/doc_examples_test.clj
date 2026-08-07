@@ -1,427 +1,438 @@
 (require "tests/test")
+(in-ns 'doc-examples-test)
+(require '[clojure.test :refer :all])
 (require '[clojure.string :refer [blank? starts-with? ends-with? includes?]])
 
 ;; Documentation examples: clean, self-contained assertions designed
-;; to appear in the Language Reference on mino-lang.org. Each deftest
-;; name matches the function it documents so the site's example matcher
-;; picks it up.
+;; to appear in the Language Reference on mino-lang.org. Each test
+;; name matches the function it documents.
+
+;; mino resolves symbols in fn bodies at call time, not compile time.
+;; A (doc-test string? ...) creates a var string? that shadows
+;; clojure.core/string? when the test body runs. doc-test appends
+;; -doc to the registered name so the test var can't clobber the
+;; very function its body exercises.
+(defmacro doc-test [name & body]
+  `(deftest ~(symbol (str (name '~name) "-doc")) ~@body))
 
 ;; --- Special forms ---
 
-(deftest def
+(doc-test def
   (def x 42)
   (is (= 42 x)))
 
-(deftest defmacro
+(doc-test defmacro
   (defmacro unless [cond then else]
     (list 'if cond else then))
   (is (= "no" (unless true "yes" "no")))
   (is (= "yes" (unless false "yes" "no"))))
 
-(deftest quasiquote
+(doc-test quasiquote
   (let [x 1 y 2]
     (is (= '(1 2 3) `(~x ~y 3)))))
 
-(deftest unquote
+(doc-test unquote
   (let [x 10]
     ;; Bare `+` in a syntax-quoted template auto-qualifies to clojure.core/+
     ;; because backquote namespace-resolves any non-locally-bound symbol.
     (is (= '(clojure.core/+ 10 1) `(+ ~x 1)))))
 
-(deftest unquote-splicing
+(doc-test unquote-splicing
   (def xs '(1 2 3))
   (is (= '(0 1 2 3 4) `(0 ~@xs 4))))
 
-(deftest defn
+(doc-test defn
   (defn square [x] (* x x))
   (is (= 25 (square 5)))
   (is (= 1 (square 1))))
 
 ;; --- Predicates ---
 
-(deftest not=
+(doc-test not=
   (is (= true (not= 1 2)))
   (is (= false (not= 1 1))))
 
-(deftest empty?
+(doc-test empty?
   (is (= true (empty? [])))
   (is (= false (empty? [1 2 3])))
   (is (= true (empty? nil))))
 
-(deftest >=
+(doc-test >=
   (is (= true (>= 3 2)))
   (is (= true (>= 3 3)))
   (is (= false (>= 2 3))))
 
-(deftest nil?
+(doc-test nil?
   (is (= true (nil? nil)))
   (is (= false (nil? 0)))
   (is (= false (nil? false))))
 
-(deftest string?
+(doc-test string?
   (is (= true (string? "hello")))
   (is (= false (string? 42))))
 
-(deftest number?
+(doc-test number?
   (is (= true (number? 42)))
   (is (= true (number? 3.14)))
   (is (= false (number? "5"))))
 
-(deftest keyword?
+(doc-test keyword?
   (is (= true (keyword? :foo)))
   (is (= false (keyword? "foo"))))
 
-(deftest symbol?
+(doc-test symbol?
   (is (= true (symbol? 'x)))
   (is (= false (symbol? :x))))
 
-(deftest vector?
+(doc-test vector?
   (is (= true (vector? [1 2 3])))
   (is (= false (vector? '(1 2 3)))))
 
-(deftest map?
+(doc-test map?
   (is (= true (map? {:a 1})))
   (is (= false (map? [1 2]))))
 
-(deftest fn?
+(doc-test fn?
   (is (= true (fn? +)))
   (is (= true (fn? (fn [x] x))))
   (is (= false (fn? 42))))
 
-(deftest set?
+(doc-test set?
   (is (= true (set? #{1 2 3})))
   (is (= false (set? [1 2 3]))))
 
-(deftest seq?
+(doc-test seq?
   (is (= true (seq? '(1 2 3))))
   (is (= false (seq? [1 2 3]))))
 
-(deftest cons?
+(doc-test cons?
   (is (= true (cons? (cons 1 nil))))
   (is (= false (cons? [1 2]))))
 
-(deftest ifn?
+(doc-test ifn?
   (is (= true (ifn? +)))
   (is (= true (ifn? :foo)))
   (is (= true (ifn? {:a 1})))
   (is (= false (ifn? 42))))
 
-(deftest true?
+(doc-test true?
   (is (= true (true? true)))
   (is (= false (true? 1))))
 
-(deftest false?
+(doc-test false?
   (is (= true (false? false)))
   (is (= false (false? nil))))
 
-(deftest boolean?
+(doc-test boolean?
   (is (= true (boolean? true)))
   (is (= true (boolean? false)))
   (is (= false (boolean? nil))))
 
-(deftest int?
+(doc-test int?
   (is (= true (int? 42)))
   (is (= false (int? 3.14))))
 
-(deftest integer?
+(doc-test integer?
   (is (= true (integer? 42)))
   (is (= false (integer? 3.14))))
 
-(deftest float?
+(doc-test float?
   (is (= true (float? 3.14)))
   (is (= false (float? 42))))
 
-(deftest double?
+(doc-test double?
   (is (= true (double? 3.14)))
   (is (= false (double? 42))))
 
-(deftest coll?
+(doc-test coll?
   (is (= true (coll? [1 2])))
   (is (= true (coll? {:a 1})))
   (is (= false (coll? 42))))
 
-(deftest list?
+(doc-test list?
   (is (= true (list? '(1 2 3))))
   (is (= false (list? [1 2 3]))))
 
-(deftest some?
+(doc-test some?
   (is (= true (some? 0)))
   (is (= true (some? false)))
   (is (= false (some? nil))))
 
-(deftest any?
+(doc-test any?
   (is (= true (any? nil)))
   (is (= true (any? 42))))
 
-(deftest sequential?
+(doc-test sequential?
   (is (= true (sequential? [1 2])))
   (is (= true (sequential? '(1 2))))
   (is (= false (sequential? {:a 1}))))
 
-(deftest associative?
+(doc-test associative?
   (is (= true (associative? {:a 1})))
   (is (= true (associative? [1 2])))
   (is (= false (associative? '(1 2)))))
 
-(deftest seqable?
+(doc-test seqable?
   (is (= true (seqable? [1 2])))
   (is (= true (seqable? "hi")))
   (is (= false (seqable? 42))))
 
-(deftest indexed?
+(doc-test indexed?
   (is (= true (indexed? [1 2])))
   (is (= false (indexed? '(1 2)))))
 
-(deftest counted?
+(doc-test counted?
   (is (= true (counted? [1 2])))
   (is (= true (counted? {:a 1})))
   (is (= false (counted? (range)))))
 
-(deftest reversible?
+(doc-test reversible?
   (is (= true (reversible? [1 2])))
   (is (= false (reversible? '(1 2)))))
 
-(deftest sorted?
+(doc-test sorted?
   (is (= true (sorted? (sorted-set 1 2 3))))
   (is (= false (sorted? #{1 2 3}))))
 
-(deftest distinct?
+(doc-test distinct?
   (is (= true (distinct? 1 2 3)))
   (is (= false (distinct? 1 2 1))))
 
-(deftest qualified-symbol?
+(doc-test qualified-symbol?
   (is (= true (qualified-symbol? 'foo/bar)))
   (is (= false (qualified-symbol? 'foo))))
 
-(deftest simple-symbol?
+(doc-test simple-symbol?
   (is (= true (simple-symbol? 'foo)))
   (is (= false (simple-symbol? 'foo/bar))))
 
-(deftest qualified-keyword?
+(doc-test qualified-keyword?
   (is (= true (qualified-keyword? :foo/bar)))
   (is (= false (qualified-keyword? :foo))))
 
-(deftest simple-keyword?
+(doc-test simple-keyword?
   (is (= true (simple-keyword? :foo)))
   (is (= false (simple-keyword? :foo/bar))))
 
 ;; --- Numeric predicates ---
 
-(deftest zero?
+(doc-test zero?
   (is (= true (zero? 0)))
   (is (= false (zero? 1))))
 
-(deftest pos?
+(doc-test pos?
   (is (= true (pos? 1)))
   (is (= false (pos? -1))))
 
-(deftest neg?
+(doc-test neg?
   (is (= true (neg? -1)))
   (is (= false (neg? 1))))
 
-(deftest pos-int?
+(doc-test pos-int?
   (is (= true (pos-int? 1)))
   (is (= false (pos-int? -1)))
   (is (= false (pos-int? 1.0))))
 
-(deftest neg-int?
+(doc-test neg-int?
   (is (= true (neg-int? -1)))
   (is (= false (neg-int? 1))))
 
-(deftest nat-int?
+(doc-test nat-int?
   (is (= true (nat-int? 0)))
   (is (= true (nat-int? 5)))
   (is (= false (nat-int? -1))))
 
-(deftest ==
+(doc-test ==
   (is (= true (== 1 1.0)))
   (is (= false (== 1 2))))
 
 ;; --- Arithmetic ---
 
-(deftest dec
+(doc-test dec
   (is (= 4 (dec 5)))
   (is (= -1 (dec 0))))
 
 ;; --- Sequences ---
 
-(deftest take-nth
+(doc-test take-nth
   (is (= '(0 3 6 9) (take-nth 3 (range 10)))))
 
-(deftest lazy-cat
+(doc-test lazy-cat
   (is (= '(1 2 3 4) (lazy-cat [1 2] [3 4]))))
 
-(deftest dorun
+(doc-test dorun
   (is (= nil (dorun (map identity [1 2 3])))))
 
-(deftest run!
+(doc-test run!
   (is (= nil (run! identity [1 2 3]))))
 
 ;; --- Collections ---
 
-(deftest array-map
+(doc-test array-map
   (is (= {:a 1 :b 2} (array-map :a 1 :b 2))))
 
 ;; --- Threading ---
 
-(deftest ->>
+(doc-test ->>
   (is (= [2 3 4] (->> [1 2 3] (map inc) vec))))
 
 ;; --- String ---
 
-(deftest blank?
+(doc-test blank?
   (is (= true (blank? "")))
   (is (= true (blank? "   ")))
   (is (= false (blank? "hi"))))
 
 ;; --- Bitwise ---
 
-(deftest bit-test
+(doc-test bit-test
   (is (= true (bit-test 5 0)))
   (is (= false (bit-test 5 1)))
   (is (= true (bit-test 5 2))))
 
 ;; --- Functional ---
 
-(deftest some-fn
+(doc-test some-fn
   (let [f (some-fn :a :b)]
     (is (= 1 (f {:a 1})))
     (is (= 2 (f {:b 2})))))
 
 ;; --- Stateful ---
 
-(deftest volatile!
+(doc-test volatile!
   (let [v (volatile! 0)]
     (vswap! v inc)
     (is (= 1 @v))))
 
-(deftest volatile?
+(doc-test volatile?
   (is (= true (volatile? (volatile! 0))))
   (is (= false (volatile? 42))))
 
-(deftest vswap!
+(doc-test vswap!
   (let [v (volatile! 10)]
     (is (= 11 (vswap! v inc)))))
 
-(deftest vreset!
+(doc-test vreset!
   (let [v (volatile! 0)]
     (vreset! v 42)
     (is (= 42 @v))))
 
 ;; --- Macros and reflection ---
 
-(deftest gensym
+(doc-test gensym
   (is (= true (symbol? (gensym))))
   (is (= false (= (gensym) (gensym)))))
 
-(deftest macroexpand-1
+(doc-test macroexpand-1
   (is (= '(if true (do 1 2)) (macroexpand-1 '(when true 1 2)))))
 
-(deftest macroexpand
+(doc-test macroexpand
   (is (= '(if true (do 1 2)) (macroexpand '(when true 1 2)))))
 
-(deftest quote
+(doc-test quote
   (is (= 'foo 'foo))
   (is (= '(1 2 3) '(1 2 3))))
 
-(deftest doc
+(doc-test doc
   (require '[clojure.repl :refer [doc-string]])
   (is (= true (string? (doc-string 'map)))))
 
-(deftest source
+(doc-test source
   (require '[clojure.repl :refer [source-form]])
   (is (= true (cons? (source-form 'when)))))
 
 ;; --- Strings ---
 
-(deftest starts-with?
+(doc-test starts-with?
   (is (= true (starts-with? "hello" "hel")))
   (is (= false (starts-with? "hello" "world"))))
 
-(deftest ends-with?
+(doc-test ends-with?
   (is (= true (ends-with? "hello" "llo")))
   (is (= false (ends-with? "hello" "hel"))))
 
-(deftest includes?
+(doc-test includes?
   (is (= true (includes? "hello world" "world")))
   (is (= false (includes? "hello" "xyz"))))
 
 ;; --- Delay ---
 
-(deftest delay
+(doc-test delay
   (let [d (delay (+ 1 2))]
     (is (= 3 (force d)))))
 
-(deftest delay?
+(doc-test delay?
   (is (= true (delay? (delay 1))))
   (is (= false (delay? 42))))
 
-(deftest force
+(doc-test force
   (is (= 42 (force (delay 42))))
   (is (= 42 (force 42))))
 
-(deftest deref-delay
+(doc-test deref-delay
   (let [d (delay (+ 1 2))]
     (is (= 3 (deref-delay d)))))
 
 ;; --- Higher-order ---
 
-(deftest memoize
+(doc-test memoize
   (let [f (memoize (fn [x] (* x x)))]
     (is (= 25 (f 5)))
     (is (= 25 (f 5)))))
 
-(deftest doto
+(doc-test doto
   (is (= [1 2 3] (doto [1 2 3] count))))
 
 ;; --- Iteration ---
 
-(deftest shuffle
+(doc-test shuffle
   (let [s (shuffle [1 2 3 4 5])]
     (is (= 5 (count s)))
     (is (= #{1 2 3 4 5} (set s)))))
 
 ;; --- Tree walking ---
 
-(deftest walk
+(doc-test walk
   (is (= [2 3 4] (walk inc vec [1 2 3]))))
 
-(deftest prewalk
+(doc-test prewalk
   (is (= [2 [3 [4]]] (prewalk #(if (number? %) (inc %) %) [1 [2 [3]]]))))
 
 ;; --- Transducers ---
 
-(deftest cat
+(doc-test cat
   (is (= [1 2 3 4] (into [] cat [[1 2] [3 4]]))))
 
-(deftest unreduced
+(doc-test unreduced
   (is (= 42 (unreduced (reduced 42))))
   (is (= 42 (unreduced 42))))
 
 ;; --- Type predicates ---
 
-(deftest char?
+(doc-test char?
   (is (= false (char? "a")))
   (is (= false (char? 65))))
 
-(deftest ratio?
+(doc-test ratio?
   (is (= false (ratio? 1)))
   (is (= false (ratio? 1.5))))
 
-(deftest decimal?
+(doc-test decimal?
   (is (= false (decimal? 1.0)))
   (is (= false (decimal? 1))))
 
-(deftest rational?
+(doc-test rational?
   (is (= true (rational? 42)))
   (is (= false (rational? 3.14))))
 
 ;; --- Random ---
 
-(deftest rand-int
+(doc-test rand-int
   (let [n (rand-int 10)]
     (is (= true (and (>= n 0) (< n 10))))))
 
-(deftest rand-nth
+(doc-test rand-nth
   (let [x (rand-nth [1 2 3])]
     (is (= true (contains? #{1 2 3} x)))))
+
+(in-ns 'user)

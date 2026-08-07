@@ -46,7 +46,7 @@
       (is (nil? (deliver p 99)))
       (is (= 42 @p)))))
 
-(deftest future-cancel
+(deftest future-cancel-test
   (when (> (mino-thread-limit) 1)
     (let [p (promise)]
       (is (true? (future-cancel p)))

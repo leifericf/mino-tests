@@ -48,4 +48,6 @@
   clojuredocs-refresh {:doc "Re-fetch ClojureDocs export and rebuild the diff-probe fixture (needs bb)"
                        :task mino-tests.tasks/clojuredocs-refresh}
   clojuredocs-summary {:doc "Run diff probes and emit output/clojuredocs-results.edn"
-                       :task mino-tests.tasks/clojuredocs-summary}}}
+                       :task mino-tests.tasks/clojuredocs-summary}
+  cov-summary      {:doc "Run llvm-cov pass and emit output/coverage-summary.edn"
+                    :task mino-tests.tasks/cov-summary}}}

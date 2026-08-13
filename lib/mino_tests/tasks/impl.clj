@@ -313,8 +313,26 @@
                      "-format=html"
                      "-output-dir=" (str out-dir "/html"))
 
-                (println "  report at:" (str out-dir "/html/index.html"))
-                0))))))))
+                 (println "  report at:" (str out-dir "/html/index.html"))
+                 0))))))))
+
+(defn extract-coverage-summary
+  "Run the bb coverage extraction script against the latest profdata.
+   Writes output/coverage-summary.edn. Requires bb + llvm-cov on PATH."
+  []
+  (let [root   (repo-root)
+        script (str root "/scripts/extract_coverage.bb")
+        bin    (str root "/tests/adv/build/adv_test_cov")
+        prof   (str root "/tests/adv/coverage/mino.profdata")]
+    (if (and (file-exists? script)
+             (file-exists? bin)
+             (file-exists? prof))
+      (try
+        (println "  extracting coverage summary...")
+        (println (sh! "bb" script bin prof "output/coverage-summary.edn"))
+        (catch e
+          (println "  (coverage summary extraction skipped:" (str e) ")")))
+      (println "  (coverage summary skipped: missing prerequisites)")))
 
 (defn sanitizer-trinity
   "Run the C-side battery under three sanitizer recipes. Each variant

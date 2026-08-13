@@ -39,6 +39,13 @@
   (println "[mino-tests] adv-test-coverage (clang llvm-cov)")
   (impl/cov-run))
 
+(defn cov-summary [& _]
+  (println "[mino-tests] cov-summary (llvm-cov HTML report + EDN artifact)")
+  (let [rc (impl/cov-run)]
+    (when (zero? rc)
+      (impl/extract-coverage-summary))
+    rc))
+
 (defn adv-test-sanitizers [& _]
   (println "[mino-tests] adv-test-sanitizers (ASan / UBSan / TSan)")
   (impl/sanitizer-trinity))

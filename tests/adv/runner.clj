@@ -92,7 +92,7 @@
 
 ;; --- driver ---
 
-(def state (atom {:total 0 :passed 0 :failed 0 :errors []}))
+(def state (atom {:total 0 :passed 0 :failed 0 :errors [] :verdicts []}))
 
 (defn- auto-capture-failure
   "Write a regression file under tests/adv/regressions/ that
@@ -170,7 +170,8 @@
                :seed    effective-seed
                :mode    (:mode cli-opts)
                :replay  (boolean (:replay cli-opts))
-               :elapsed (- (time-ms) start-ms)}
+               :elapsed (- (time-ms) start-ms)
+               :verdicts (:verdicts s)}
       summary-path (getenv "MINO_PROBE_SUMMARY")]
   (when summary-path
     (spit summary-path (pr-str summary)))

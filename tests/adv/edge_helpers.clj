@@ -121,11 +121,12 @@
 ;; --- probe verdict emit ---
 
 (defn emit-verdict
-  "Print one JSON line for the runner to ingest."
+  "Print one line for the runner to ingest and capture in the state atom."
   [probe-name verdict & extras]
   (let [m (merge {:probe probe-name :verdict verdict}
                  (apply hash-map extras))]
-    (println (pr-str m))))
+    (println (pr-str m))
+    (swap! state update :verdicts conj m)))
 
 ;; --- with-seed: pin RNG state for one block ---
 

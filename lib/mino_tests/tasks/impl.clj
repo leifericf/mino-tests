@@ -332,7 +332,7 @@
         (println (sh! "bb" script bin prof "output/coverage-summary.edn"))
         (catch e
           (println "  (coverage summary extraction skipped:" (str e) ")")))
-      (println "  (coverage summary skipped: missing prerequisites)")))
+      (println "  (coverage summary skipped: missing prerequisites)"))))
 
 (defn sanitizer-trinity
   "Run the C-side battery under three sanitizer recipes. Each variant

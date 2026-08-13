@@ -64,6 +64,33 @@
         (println "  runner failed:" (str e))
         1))))
 
+(defn run-script-suite-with-summary
+  "Like run-script-suite but sets MINO_PROBE_SUMMARY so the runner
+   writes a structured EDN summary to :summary-path before exiting."
+  [opts]
+  (let [bin    (mino-bin)
+        runner (runner-path "runner.clj")
+        seed   (str (or (:seed opts) 0))
+        mode   (name (or (:mode opts) :smoke))
+        only   (:only opts)
+        out    (:summary-path opts "output/probe-results.edn")
+        cmd    (cond-> (str "MINO_PROBE_SUMMARY=" out " "
+                            bin " " runner " --seed " seed " --mode " mode)
+                 only (str " --only " only))]
+    (try (sh! "mkdir" "-p" "output") (catch e nil))
+    (println "  exec: sh -c" cmd)
+    (try
+      (println (sh! "sh" "-c" cmd))
+      (try
+        (println "---")
+        (println (slurp out))
+        (catch e
+          (println "  (no summary file produced)")))
+      0
+      (catch e
+        (println "  runner failed:" (str e))
+        1))))
+
 (defn mino-src-root
   "Where to find the runtime source / mino.h for harness compilation.
    MINO_DEV_ROOT lets developers point at a local working copy of mino

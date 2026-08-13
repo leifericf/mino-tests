@@ -163,13 +163,17 @@
   (when-not (stop-early?) (load-probe p)))
 
 (println)
-(let [s @state]
-  (println (pr-str {:total   (:total s)
-                    :passed  (:passed s)
-                    :failed  (:failed s)
-                    :seed    effective-seed
-                    :mode    (:mode cli-opts)
-                    :replay  (boolean (:replay cli-opts))
-                    :elapsed (- (time-ms) start-ms)})))
+(let [s @state
+      summary {:total   (:total s)
+               :passed  (:passed s)
+               :failed  (:failed s)
+               :seed    effective-seed
+               :mode    (:mode cli-opts)
+               :replay  (boolean (:replay cli-opts))
+               :elapsed (- (time-ms) start-ms)}
+      summary-path (getenv "MINO_PROBE_SUMMARY")]
+  (when summary-path
+    (spit summary-path (pr-str summary)))
+  (println (pr-str summary)))
 
 (exit (if (zero? (:failed @state)) 0 1))

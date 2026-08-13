@@ -95,3 +95,9 @@
 (defn clojuredocs-refresh [& _]
   (println "[mino-tests] clojuredocs-refresh (re-download corpus, re-run bb ground truth)")
   (impl/clojuredocs-refresh))
+
+(defn clojuredocs-summary [& _]
+  (println "[mino-tests] clojuredocs-summary (diff probes, emit output/clojuredocs-results.edn)")
+  (impl/run-script-suite-with-summary
+    {:mode :smoke :seed 0 :only "diff_"
+     :summary-path "output/clojuredocs-results.edn"}))

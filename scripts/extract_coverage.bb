@@ -16,7 +16,7 @@
 
 (require '[babashka.process :refer [shell]])
 (require '[babashka.fs :as fs])
-(require '[clojure.data.json :as json])
+(require '[cheshire.core :as json])
 
 (when (< (count *command-line-args*) 2)
   (binding [*out* *err*]
@@ -33,7 +33,7 @@
                (str "llvm-cov export -summary-only -format=json "
                     "-instr-profile=" profdata " " binary))))
 
-(def data (json/read-str json-str :key-fn keyword))
+(def data (json/parse-string json-str true))
 
 (def totals (get-in data [:data 0 :totals]))
 

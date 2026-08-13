@@ -623,19 +623,16 @@
 
 (defn clojuredocs-refresh
   "Re-download the ClojureDocs example export, parse it, and re-run
-   each surviving tuple through bb to record fresh ground truth.
+   each surviving tuple through mino to record fresh ground truth.
    The result overwrites tests/adv/fixtures/clojuredocs-tuples.edn.
 
-   Dev-host only -- still uses bb for JSON parsing (cheshire.core) and
-   HTTP (babashka.process). mino's stdlib lacks JSON parsing; until it
-   ships one, this is the one documented bb dependency in the
-   ecosystem. The CI nightly run reads the vendored EDN and never
-   refreshes, so CI needs no bb."
+   Dev-host only. Uses mino's own clojure.data.json for parsing and
+   ./mino/mino as the ground-truth evaluator."
   []
   (let [script (str (repo-root) "/tests/adv/clojuredocs_build.clj")]
-    (println "  exec: bb" script)
+    (println "  exec: ./mino/mino" script)
     (try
-      (println (sh! "bb" script))
+      (println (sh! "./mino/mino" script))
       0
       (catch e
         (println "  clojuredocs-refresh failed:" (str e))

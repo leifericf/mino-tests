@@ -1,30 +1,23 @@
-#!/usr/bin/env bb
-;; clojuredocs_build.clj  --  build the ClojureDocs differential-test fixture.
+;; clojuredocs_build.clj -- build the ClojureDocs differential-test
+;; fixture.
 ;;
 ;; Pulls the ClojureDocs example export, splits each example body into
 ;; (preamble + final-form + ;;=> expected) tuples, filters out tuples
 ;; that exercise Java interop / side effects / REPL state, then runs
-;; each survivor through bb to record a ground-truth output. The result
-;; is written as EDN to tests/adv/fixtures/clojuredocs-tuples.edn.
+;; each survivor through mino to record a ground-truth output. The
+;; result is written as EDN to tests/adv/fixtures/clojuredocs-tuples.edn.
 ;;
 ;; The probe (tests/adv/script/diff_clojuredocs.clj) loads that EDN and
-;; only needs to run each form through mino, comparing to the recorded
-;; bb output. No bb at test time -> nightly CI doesn't need it.
+;; runs each form through mino, comparing to the recorded output.
 ;;
 ;; Run this on the dev host whenever the fixture should be refreshed:
 ;;
 ;;   ./mino/mino task clojuredocs-refresh
 ;;
-;; (or directly: bb tests/adv/clojuredocs_build.clj)
-;;
-;; The script requires bb plus a network connection to clojuredocs.org.
-;; It writes/overwrites the EDN fixture; nothing else.
+;; The script requires a network connection to clojuredocs.org.
 
 (require '[clojure.string :as str]
-         '[clojure.edn :as edn]
-         '[clojure.java.io :as io]
-         '[cheshire.core :as json]
-         '[babashka.process :as p])
+         '[clojure.data.json :as json])
 
 ;; ---- Configuration ----
 
@@ -33,9 +26,6 @@
 (def out-path "tests/adv/fixtures/clojuredocs-tuples.edn")
 
 (def stdlib-nss
-  "Examples for vars in these namespaces are considered in-scope. Other
-   namespaces (core.async, core.logic, contrib libs) exercise dispatch
-   that bb and mino don't both ship, so they aren't a useful diff."
   #{"clojure.core" "clojure.string" "clojure.set" "clojure.walk"
     "clojure.zip" "clojure.template" "clojure.edn"
     "clojure.spec.alpha"})
@@ -63,10 +53,7 @@
      declare definterface defmulti defprotocol defrecord deftype reify proxy
      send-via set-error-handler! restart-agent
      meta with-meta vary-meta alter-meta! reset-meta!
-     ;; Java-class-returning fns: bb returns java.lang.Long etc., mino's
-     ;; type system is different so these always look like divergence.
      class type instance? cast
-     ;; dot special forms for Java interop
      . .. set!})
 
 ;; ---- Body parsing ----
@@ -81,18 +68,14 @@
    any reader error -- malformed examples are skipped, not flagged."
   [s]
   (try
-    (let [rdr (java.io.PushbackReader. (java.io.StringReader. s))
-          eof ::eof]
-      (binding [*read-eval* false]
-        (loop [acc []]
-          (let [v (read {:eof eof :read-cond :allow :features #{:clj}} rdr)]
-            (if (= v eof) acc (recur (conj acc v)))))))
-    (catch Exception _ nil)))
+    (let [wrapped (read-string (str "(do " s "\n)"))]
+      (if (and (seq? wrapped) (= (first wrapped) 'do))
+        (vec (rest wrapped))
+        [wrapped]))
+    (catch e nil)))
 
 (defn split-segments
-  "Split a body into [{:code [lines] :expected '...'}] segments. Each
-   segment is the code that came before its `;;=>` line, plus the
-   continuation `;;` lines after."
+  "Split a body into [{:code [lines] :expected '...'}] segments."
   [body]
   (let [lines (str/split-lines body)]
     (loop [acc [] code [] lines lines]
@@ -127,13 +110,9 @@
     (symbol? form)
     (let [s (name form) ns (namespace form)]
       (boolean
-       (or ;; Class. or Class or pkg.Class or pkg.Class. constructor calls
-           (re-matches #"^[A-Z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*\.?$" s)
-           ;; .methodName access form
+       (or (re-matches #"^[A-Z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*\.?$" s)
            (re-matches #"^\.[A-Za-z].*$" s)
-           ;; Class/staticMethod -- detect by uppercase first letter of namespace
            (and ns (re-matches #"^[A-Z].*" ns))
-           ;; Java-package prefixes used as a function call: java.util.Date.
            (re-find #"^(?:java|javax|jakarta|org\.[a-z]+|com\.[a-z]+|sun\.|clojure\.lang)\." s)
            (= s "new"))))
     (sequential? form) (some has-java-interop? form)
@@ -150,17 +129,6 @@
       :else nil)))
 
 (defn- segment->tuple
-  "Build a tuple for one segment of an example body.
-
-   The stored shape is source-only -- preamble and form are kept as
-   pr-str text rather than as parsed forms -- so the EDN stays
-   readable by clojure.edn (no reader-macro literals). The text
-   round-trips cleanly into mino's full reader at probe time.
-
-   `carry-pre` is the running preamble text accumulated from every
-   prior segment in the same example body; helper `def`s and macros
-   defined alongside the first `;;=>` line are visible to every
-   subsequent test value."
   [carry-pre {:keys [code expected]}]
   (when (and expected (seq code))
     (let [code-str (strip-repl-prompts (str/join "\n" code))
@@ -176,18 +144,9 @@
            :form-source     (pr-str form)
            :expected        (str/trim expected)
            :skip-reason     (triage-reason forms)
-           ;; The full segment text (preamble + form) becomes the carry
-           ;; for any subsequent segment in the same body. Side-effect
-           ;; forms (e.g. `(println ...)`) at the head of the example
-           ;; ride along but are harmless because the rendered script
-           ;; only prints (pr-str form-source).
            :segment-text    (str/join "\n" (map pr-str forms))})))))
 
 (defn parse-body
-  "Parse an example body into tuples, carrying every prior segment's
-   text forward as preamble so helper defs survive across `;;=>`
-   boundaries. Returns the list of tuples with `:segment-text` stripped
-   (that field is parse-time bookkeeping, not stored in the fixture)."
   [body]
   (loop [segs (split-segments body), carry "", out []]
     (if (empty? segs)
@@ -212,13 +171,8 @@
                                 (parse-body (:body ex))))
                          (:examples v))))))
 
-;; ---- bb ground truth ----
+;; ---- Ground truth ----
 
-;; Same prelude as `diff_clojuredocs.clj`. bb's REPL auto-aliases these
-;; namespaces, but emitting the explicit `require` keeps the bb and mino
-;; runs reading the same surface; if the prelude ever drifts we want a
-;; ground-truth re-build to surface it instead of letting the two halves
-;; quietly diverge.
 (def script-prelude
   (str "(require '[clojure.string :as str]"
        " '[clojure.set :as set]"
@@ -227,62 +181,53 @@
        " '[clojure.math])\n"))
 
 (defn- render-script
-  "Render a self-contained script that prints (pr-str <form>) with
-   *print-length* and *print-level* bound. The bounds keep an infinite
-   lazy seq from hanging the subprocess; an over-long print still gets
-   truncated cleanly with `...` at the end."
   [{:keys [preamble-source form-source]}]
   (str script-prelude
        preamble-source
        "\n(binding [*print-length* 200 *print-level* 20]"
        " (println (pr-str " form-source ")))\n"))
 
-(defn- run-bb
-  "Run bb with the given script. Hard kill after 3s -- any example that
-   takes that long is either looping or producing too much output, and
-   neither is useful as a ground truth."
+(defn- run-evaluator
+  "Run the mino binary with the given script. Returns {:out :exit}
+   from sh. Uses the timeout command to kill runaway evaluations."
   [script]
-  (let [proc (p/process ["bb" "-e" script] {:out :string :err :string})
-        result (deref proc 3000 ::timeout)]
-    (if (= result ::timeout)
-      (do (.destroyForcibly ^java.lang.Process (:proc proc))
-          {:out "" :exit -1 :err "timeout" :timed-out? true})
-      {:out (str/trim-newline (or (:out result) ""))
-       :exit (:exit result)
-       :err (when (seq (:err result)) (first (str/split-lines (:err result))))
-       :timed-out? false})))
+  (let [result (sh "timeout" "3" "./mino/mino" "-e" script)]
+    {:out (str/trim-newline (or (:out result) ""))
+     :exit (:exit result)}))
 
 (defn- ground-truth [tuple]
   (try
-    (let [{:keys [out exit err timed-out?]} (run-bb (render-script tuple))]
+    (let [{:keys [out exit]} (run-evaluator (render-script tuple))]
       (cond
-        timed-out?         {:status :bb-timeout}
-        (not (zero? exit)) {:status :bb-fail :err err}
-        (str/blank? out)   {:status :bb-empty}
-        :else              {:status :ok :bb-out out}))
-    (catch Exception e
-      {:status :bb-throw :err (.getMessage e)})))
+        (not (zero? exit)) {:status :eval-fail}
+        (str/blank? out)   {:status :eval-empty}
+        :else              {:status :ok :eval-out out}))
+    (catch e
+      {:status :eval-throw})))
 
 ;; ---- Pipeline ----
 
 (defn- ensure-corpus! []
-  (when-not (.exists (io/file cache-path))
+  (when-not (file-exists? cache-path)
     (println "Downloading" export-url "->" cache-path)
-    (io/make-parents cache-path)
-    (spit cache-path (slurp export-url))))
+    (mkdir-p "tests/adv/fixtures")
+    (spit cache-path (sh! "curl" "-s" export-url))))
+
+(defn- iso-timestamp []
+  (str/trim (sh! "date" "-u" "+%Y-%m-%dT%H:%M:%SZ")))
 
 (defn- build! []
   (ensure-corpus!)
   (println "Parsing" cache-path)
-  (let [export (json/parse-string (slurp cache-path) true)
+  (let [export (json/read-str (slurp cache-path) :key-fn keyword)
         tuples (corpus-tuples export)
         runnable (filter #(nil? (:skip-reason %)) tuples)
         n-total (count tuples)
         n-run (count runnable)
         n-skip (- n-total n-run)]
     (println "Parsed" n-total "tuples;" n-run "runnable," n-skip "triaged")
-    (println "Running bb on" n-run "tuples (this takes a few minutes)...")
-    (let [t0 (System/currentTimeMillis)
+    (println "Running mino on" n-run "tuples (this takes a few minutes)...")
+    (let [t0 (time-ms)
           enriched (vec
                     (for [[i t] (map-indexed vector runnable)]
                       (let [gt (ground-truth t)]
@@ -293,15 +238,15 @@
                             (assoc :gt gt)))))
           n-ok (count (filter #(= :ok (:status (:gt %))) enriched))
           n-fail (- n-run n-ok)
-          elapsed-s (long (/ (- (System/currentTimeMillis) t0) 1000))]
-      (println "bb ran in" elapsed-s "s;" n-ok "produced ground truth," n-fail "couldn't")
+          elapsed-s (long (/ (- (time-ms) t0) 1000))]
+      (println "mino ran in" elapsed-s "s;" n-ok "produced ground truth," n-fail "couldn't")
       (println "Writing" out-path)
-      (io/make-parents out-path)
+      (mkdir-p "tests/adv/fixtures")
       (spit out-path
             (binding [*print-length* nil *print-level* nil]
               (pr-str
                {:corpus {:source export-url
-                         :captured-at (str (java.time.Instant/now))
+                         :captured-at (iso-timestamp)
                          :total-examples (->> (:vars export) (mapcat :examples) count)
                          :total-tuples n-total
                          :runnable n-run

@@ -316,20 +316,60 @@
                  (println "  report at:" (str out-dir "/html/index.html"))
                  0))))))))
 
+(defn parse-coverage-report
+  "Parse the text output of `llvm-cov report` into a summary map.
+   Returns nil if the TOTAL line is not found.
+
+   The llvm-cov report TOTAL line has this shape:
+     TOTAL  <regions> <missed-regions> <cover%>  <functions> <missed-fn> <exec%>  <lines> <missed-lines> <cover%>"
+  [text]
+  (let [total-line (->> (str/split-lines text)
+                        (filter #(str/starts-with? (str/trim %) "TOTAL"))
+                        first)]
+    (when total-line
+      (let [fields (vec (filter #(not (= % "")) 
+                                (str/split (str/trim total-line) #"\s+")))
+            parse-num (fn [s] (long (read-string s)))
+            parse-pct (fn [s] (/ (parse-num (str/replace s "%" "")) 100.0))]
+        (when (>= (count fields) 10)
+          (let [regions-total    (parse-num (nth fields 1))
+                regions-missed   (parse-num (nth fields 2))
+                functions-total  (parse-num (nth fields 4))
+                functions-missed (parse-num (nth fields 5))
+                lines-total      (parse-num (nth fields 7))
+                lines-missed     (parse-num (nth fields 8))]
+            {:lines-covered      (- lines-total lines-missed)
+             :lines-total        lines-total
+             :lines-percent      (parse-pct (nth fields 9))
+             :regions-covered    (- regions-total regions-missed)
+             :regions-total      regions-total
+             :regions-percent    (parse-pct (nth fields 3))
+             :functions-covered  (- functions-total functions-missed)
+             :functions-total    functions-total
+             :functions-percent  (parse-pct (nth fields 6))}))))))
+
 (defn extract-coverage-summary
-  "Run the bb coverage extraction script against the latest profdata.
-   Writes output/coverage-summary.edn. Requires bb + llvm-cov on PATH."
+  "Run llvm-cov report against the latest profdata and write the
+   summary EDN. Requires llvm-cov on PATH."
   []
-  (let [root   (repo-root)
-        script (str root "/scripts/extract_coverage.bb")
-        bin    (str root "/tests/adv/build/adv_test_cov")
-        prof   (str root "/tests/adv/coverage/mino.profdata")]
-    (if (and (file-exists? script)
-             (file-exists? bin)
+  (let [root (repo-root)
+        bin  (str root "/tests/adv/build/adv_test_cov")
+        prof (str root "/tests/adv/coverage/mino.profdata")]
+    (if (and (file-exists? bin)
              (file-exists? prof))
       (try
         (println "  extracting coverage summary...")
-        (println (sh! "bb" script bin prof "output/coverage-summary.edn"))
+        (let [report-text (sh! "llvm-cov" "report" bin
+                               (str "-instr-profile=" prof)
+                               "-use-color=false")
+              summary     (parse-coverage-report report-text)]
+          (if summary
+            (do
+              (mkdir-p "output")
+              (spit "output/coverage-summary.edn" (pr-str summary))
+              (println "coverage summary: output/coverage-summary.edn")
+              (println (pr-str summary)))
+            (println "  (coverage summary skipped: could not parse llvm-cov report)")))
         (catch e
           (println "  (coverage summary extraction skipped:" (str e) ")")))
       (println "  (coverage summary skipped: missing prerequisites)"))))

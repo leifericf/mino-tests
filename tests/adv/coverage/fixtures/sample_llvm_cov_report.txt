@@ -1,0 +1,9 @@
+Filename           Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
+---
+src/eval/eval.c              180               20    88.89%          15                1    93.33%         320               40    87.50%
+src/runtime/state.c          120               10    91.67%          10                0   100.00%         200               20    90.00%
+src/gc/driver.c              200               30    85.00%          12                1    91.67%         350               50    85.71%
+src/collections/vec.c        160               15    90.63%          13                0   100.00%         280               30    89.29%
+src/values/val.c             140               12    91.43%          11                1    90.91%         250               25    90.00%
+---
+TOTAL                       1800              260    85.56%         150                8    94.67%        3200              420    86.88%

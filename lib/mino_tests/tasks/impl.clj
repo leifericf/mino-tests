@@ -626,8 +626,11 @@
    each surviving tuple through bb to record fresh ground truth.
    The result overwrites tests/adv/fixtures/clojuredocs-tuples.edn.
 
-   Dev-host only -- needs bb on PATH and network access. The CI
-   nightly run reads the vendored EDN and never refreshes."
+   Dev-host only -- still uses bb for JSON parsing (cheshire.core) and
+   HTTP (babashka.process). mino's stdlib lacks JSON parsing; until it
+   ships one, this is the one documented bb dependency in the
+   ecosystem. The CI nightly run reads the vendored EDN and never
+   refreshes, so CI needs no bb."
   []
   (let [script (str (repo-root) "/tests/adv/clojuredocs_build.clj")]
     (println "  exec: bb" script)

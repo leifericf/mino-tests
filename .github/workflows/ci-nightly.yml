@@ -134,4 +134,4 @@ jobs:
       - name: Coverage pass
         env:
           MINO_BIN: ${{ github.workspace }}/mino/mino
-        run: ./mino/mino task adv-test-coverage || echo "(coverage path not yet wired -- Cycle C work)"
+        run: ./mino/mino task cov-summary

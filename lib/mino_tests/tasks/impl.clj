@@ -131,41 +131,56 @@
 ;; translation unit (last synced against mino's v0.423.x lib-srcs).
 (def mino-lib-srcs
   ["src/eval/eval.c" "src/diag/diag.c" "src/eval/special.c"
-   "src/eval/special_registry.c" "src/eval/defs.c" "src/eval/bindings.c"
-   "src/eval/control.c" "src/eval/fn.c" "src/eval/bc/vm.c"
-   "src/eval/bc/compile.c" "src/eval/bc/gc_handlers.c"
-   "src/eval/bc/jit/entry.c"
-   "src/eval/bc/jit/stats.c" "src/eval/bc/jit/helpers.c"
-   "src/eval/bc/jit/patcher.c" "src/eval/bc/jit/patcher_x86_64.c"
-   "src/eval/bc/jit/emit.c" "src/runtime/state.c" "src/runtime/var.c"
-   "src/runtime/error.c" "src/runtime/env.c" "src/runtime/ns_env.c"
-   "src/runtime/path_buf.c" "src/runtime/host_threads.c"
-   "src/runtime/capabilities.c" "src/gc/driver.c" "src/gc/roots.c"
-   "src/gc/major.c" "src/gc/barrier.c" "src/gc/minor.c"
+   "src/eval/special_registry.c"
+   "src/eval/defs.c" "src/eval/bindings.c"
+   "src/eval/bindings_dyn.c" "src/eval/bindings_destr.c"
+   "src/eval/control.c" "src/eval/fn.c"
+   "src/eval/fn_argv.c" "src/eval/fn_nonfn.c"
+   "src/eval/bc/vm.c" "src/eval/bc/compile.c"
+   "src/eval/bc/gc_handlers.c"
+   "src/eval/bc/jit/entry.c" "src/eval/bc/jit/stats.c"
+   "src/eval/bc/jit/helpers.c" "src/eval/bc/jit/helpers_loop.c"
+   "src/eval/bc/jit/patcher.c"
+   "src/eval/bc/jit/patcher_x86_64.c"
+   "src/eval/bc/jit/emit.c" "src/eval/bc/jit/region.c"
+   "src/runtime/state.c" "src/runtime/var.c"
+   "src/runtime/error.c" "src/runtime/env.c"
+   "src/runtime/ns_env.c"
+   "src/runtime/path_buf.c"
+   "src/runtime/host_threads.c"
+   "src/runtime/capabilities.c"
+   "src/runtime/image.c"
+   "src/runtime/image_load.c"
+   "src/gc/driver.c" "src/gc/roots.c" "src/gc/major.c"
+   "src/gc/barrier.c" "src/gc/minor.c"
    "src/gc/trace.c" "src/gc/profile.c" "src/runtime/module.c"
    "src/public/gc.c" "src/public/embed.c"
    "src/values/val.c" "src/values/gc_handlers.c"
    "src/collections/vec.c" "src/collections/map.c"
-   "src/collections/chunk.c" "src/collections/queue.c"
+   "src/collections/map_hash.c" "src/collections/map_owned.c"
+   "src/collections/chunk.c"
+   "src/collections/queue.c"
    "src/collections/bytes.c"
    "src/collections/rbtree.c"
-   "src/collections/builders.c" "src/collections/gc_handlers.c"
-   "src/collections/iter.c"
-   "src/eval/read.c" "src/eval/print.c" "src/prim/prim.c"
-   "src/prim/install.c" "src/prim/install_stdlib.c"
+   "src/collections/builders.c"
+   "src/collections/gc_handlers.c"
+   "src/collections/iter.c" "src/eval/read.c" "src/eval/read_numeric.c" "src/eval/print.c"
+   "src/eval/print_dynvars.c" "src/eval/special_host.c"
+   "src/prim/prim.c" "src/prim/install.c" "src/prim/install_stdlib.c"
    "src/prim/numeric.c" "src/prim/numeric_math.c"
    "src/prim/numeric_bit.c" "src/prim/numeric_coerce.c"
    "src/prim/collections.c" "src/prim/collections_transient.c"
    "src/prim/bits.c"
-   "src/prim/sequences.c" "src/prim/sequences_seq.c" "src/prim/lazy.c"
-   "src/prim/string.c"
-   "src/prim/io.c" "src/prim/reflection.c" "src/prim/meta.c"
-   "src/prim/regex.c" "src/prim/stateful.c" "src/prim/stm.c"
-   "src/prim/agent.c" "src/prim/module.c" "src/prim/ns.c"
-   "src/prim/fs.c" "src/prim/proc.c" "src/prim/host.c"
-   "src/prim/jvm_statics.c" "src/interop/syntax.c"
-   "src/collections/clone.c"
-   "src/regex/re.c" "src/collections/transient.c"
+   "src/prim/sequences.c" "src/prim/sequences_seq.c"
+   "src/prim/lazy.c"
+   "src/prim/string.c" "src/prim/io.c"
+   "src/prim/reflection.c" "src/prim/meta.c" "src/prim/regex.c"
+   "src/prim/stateful.c" "src/prim/stateful_bindings.c" "src/prim/stm.c" "src/prim/agent.c" "src/prim/store.c" "src/prim/module.c"
+   "src/prim/image.c"
+   "src/prim/ns.c"
+   "src/prim/fs.c" "src/prim/proc.c"
+   "src/prim/host.c" "src/prim/jvm_statics.c" "src/interop/syntax.c"
+   "src/collections/clone.c" "src/regex/re_compile.c" "src/regex/re_match.c" "src/collections/transient.c"
    "src/async/scheduler.c" "src/async/timer.c" "src/async/chan.c"
    "src/prim/async.c"
    "src/prim/bignum.c" "src/prim/ratio.c" "src/prim/bigdec.c"
@@ -194,17 +209,19 @@
                     :cov   ["-fprofile-instr-generate" "-fcoverage-mapping"
                             "-g" "-O1"]
                     ["-O2"])
-        ;; For the :release variant, link against mino's prebuilt .o
-        ;; files (fast incremental). For sanitizer variants, recompile
-        ;; mino sources alongside the harness so the sanitizer flags
-        ;; reach every TU. mino's own build doesn't keep
-        ;; per-sanitizer .o files (it produces mino_asan / mino_ubsan
-        ;; / mino_tsan as single-cc binaries), so this is the cleanest
-        ;; way to share the runtime under a sanitizer build.
-        is-sanitizer? (boolean (#{:asan :tsan :ubsan} variant))
+        ;; The :release variant links against mino's prebuilt .o files
+        ;; (fast incremental). Sanitizer and :cov variants recompile
+        ;; mino sources alongside the harness so their flags reach
+        ;; every TU; for :cov that means mino itself is instrumented
+        ;; and the report covers the runtime, not just the harness.
+        ;; mino's own build doesn't keep per-variant .o files (it
+        ;; produces mino_asan / mino_ubsan / mino_tsan as single-cc
+        ;; binaries), so this is the cleanest way to share the runtime
+        ;; under a non-default build.
+        compile-mino-from-source? (boolean (#{:asan :tsan :ubsan :cov} variant))
         mino-objs (mapv #(str mino-root "/" (src->obj %)) mino-lib-srcs)
         mino-srcs (mapv #(str mino-root "/" %) mino-lib-srcs)
-        mino-pieces (if is-sanitizer? mino-srcs mino-objs)
+        mino-pieces (if compile-mino-from-source? mino-srcs mino-objs)
         first-piece (first mino-pieces)
         flags     (concat ["-std=c99" "-Wall" "-Wno-extra-semi"
                            "-DMINO_CPJIT=1"]
@@ -214,9 +231,10 @@
         argv      (concat [cc] flags
                           (map #(str "-I" mino-root "/" %)
                                ["src" "src/public" "src/runtime"
-                                "src/gc" "src/eval" "src/collections"
-                                "src/prim" "src/async" "src/interop"
-                                "src/diag" "src/vendor/imath"])
+                                "src/gc" "src/eval" "src/values"
+                                "src/collections" "src/prim" "src/async"
+                                "src/interop" "src/diag"
+                                "src/vendor/imath"])
                           ["-I" (str root "/tests/adv")]
                           harness-c embeds-c
                           mino-pieces
@@ -225,7 +243,7 @@
     (println "  variant:   " (name (or variant :release)))
     (println "  out:       " out)
     (sh! "mkdir" "-p" out-dir)
-    (if (or is-sanitizer? (file-exists? first-piece))
+    (if (or compile-mino-from-source? (file-exists? first-piece))
       (try
         (println (apply sh! argv))
         (println "  built:" out)
@@ -239,13 +257,15 @@
         1))))
 
 (defn- detect-tool
-  "Resolve a clang tool. On macOS prefers xcrun -f; otherwise falls
-   back to a plain `which` lookup. Returns the absolute path or nil."
+  "Resolve a clang tool. Prefers a PATH hit (/usr/bin/clang is the
+  xcrun wrapper, which resolves the macOS SDK itself); falls back to
+  xcrun -f for tools that are not on PATH (llvm-cov, llvm-profdata).
+  Returns the absolute path or nil."
   [name]
-  (let [via-xcrun (try (sh! "xcrun" "-f" name) (catch _ nil))
-        via-which (try (sh! "which" name) (catch _ nil))]
-    (or (when via-xcrun (str/trim via-xcrun))
-        (when via-which (str/trim via-which)))))
+  (let [via-which (try (sh! "which" name) (catch _ nil))
+        via-xcrun (try (sh! "xcrun" "-f" name) (catch _ nil))]
+    (or (when via-which (str/trim via-which))
+        (when via-xcrun (str/trim via-xcrun)))))
 
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
@@ -350,29 +370,33 @@
 
 (defn extract-coverage-summary
   "Run llvm-cov report against the latest profdata and write the
-   summary EDN. Requires llvm-cov on PATH."
+    summary EDN. Resolves llvm-cov the same way cov-run does (xcrun
+    first, PATH second) so it works on macOS hosts too."
   []
   (let [root (repo-root)
+        cov  (detect-tool "llvm-cov")
         bin  (str root "/tests/adv/build/adv_test_cov")
         prof (str root "/tests/adv/coverage/mino.profdata")]
-    (if (and (file-exists? bin)
-             (file-exists? prof))
-      (try
-        (println "  extracting coverage summary...")
-        (let [report-text (sh! "llvm-cov" "report" bin
-                               (str "-instr-profile=" prof)
-                               "-use-color=false")
-              summary     (parse-coverage-report report-text)]
-          (if summary
-            (do
-              (mkdir-p "output")
-              (spit "output/coverage-summary.edn" (pr-str summary))
-              (println "coverage summary: output/coverage-summary.edn")
-              (println (pr-str summary)))
-            (println "  (coverage summary skipped: could not parse llvm-cov report)")))
-        (catch e
-          (println "  (coverage summary extraction skipped:" (str e) ")")))
-      (println "  (coverage summary skipped: missing prerequisites)"))))
+    (if (nil? cov)
+      (println "  (coverage summary skipped: llvm-cov not found)")
+      (if (and (file-exists? bin)
+               (file-exists? prof))
+        (try
+          (println "  extracting coverage summary...")
+          (let [report-text (sh! cov "report" bin
+                                 (str "-instr-profile=" prof)
+                                 "-use-color=false")
+                summary     (parse-coverage-report report-text)]
+            (if summary
+              (do
+                (mkdir-p "output")
+                (spit "output/coverage-summary.edn" (pr-str summary))
+                (println "coverage summary: output/coverage-summary.edn")
+                (println (pr-str summary)))
+              (println "  (coverage summary skipped: could not parse llvm-cov report)")))
+          (catch e
+            (println "  (coverage summary extraction skipped:" (str e) ")")))
+        (println "  (coverage summary skipped: missing prerequisites)")))))
 
 (defn sanitizer-trinity
   "Run the C-side battery under three sanitizer recipes. Each variant

@@ -56,6 +56,13 @@ jobs:
       - name: Migrated suite
         run: ./mino/mino tests/run_migrated.clj
 
+      - name: TLS E2E battery (moved from mino)
+        # The TLS-server-dependent tests mino moved here (client-only
+        # BearSSL). Needs python3 for the fixture TLS peer; every
+        # server is killed in a finally and alarm-guarded. ~6s.
+        run: ./mino/mino task tls-e2e
+        timeout-minutes: 5
+
       - name: Fault injection
         run: ./mino/mino tests/run_fault_inject.clj
 

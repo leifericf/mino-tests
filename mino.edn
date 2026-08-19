@@ -31,8 +31,10 @@
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"
                      :task mino-tests.tasks/ci-matrix}
-  test-migrated     {:doc  "Run the tests migrated out of mino's tests/ (sub-second per test)"
-                     :task mino-tests.tasks/test-migrated}
+   test-migrated     {:doc  "Run the tests migrated out of mino's tests/ (sub-second per test)"
+                      :task mino-tests.tasks/test-migrated}
+   tls-e2e           {:doc  "TLS E2E battery moved out of mino (python TLS fixture server, ~6s)"
+                      :task mino-tests.tasks/tls-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}
   test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"

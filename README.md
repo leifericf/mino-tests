@@ -34,6 +34,10 @@ mino-tests/
     regressions/*.clj         -- auto-captured failing seeds
     coverage/                 -- llvm-cov reports (when run)
   tests/migrated/             -- tests moved out of mino (Cycle Y)
+  tests/tls/                  -- TLS E2E battery moved out of mino
+    fixture_server.py           -- python3 TLS peer (modes, see header)
+    fixtures/                   -- throwaway certs + regeneration README
+    *_test.clj                  -- tls / pool / http-request / integration
   .github/workflows/          -- ci.yml (smoke), ci-nightly.yml (soak)
 ```
 
@@ -63,6 +67,7 @@ runner.
 | `adv-test-sanitizers` | Triple sanitizer pass (ASan + UBSan + TSan). |
 | `build-cov` | Build `mino_cov` instrumented binary. |
 | `bump-mino` | Move the `mino` submodule to a newer tag and lock it. |
+| `tls-e2e` | TLS E2E battery moved out of mino: real handshakes, verification refusals, byte fidelity, read timeouts, pooled https against a python TLS fixture server (~6s). CI uses this. |
 | `clojuredocs-refresh` | Re-download the ClojureDocs example export and rebuild the diff-probe fixture. Dev-host only; needs `bb` on PATH. |
 
 ## Boundary principle

@@ -78,6 +78,10 @@
   (println "[mino-tests] time-e2e (time/date external-oracle battery)")
   (impl/run-clj-file "tests/run_time_e2e.clj"))
 
+(defn path-e2e [& _]
+  (println "[mino-tests] path-e2e (path/glob external-oracle battery)")
+  (impl/run-clj-file "tests/run_path_e2e.clj"))
+
 (defn test-fault-inject [& _]
   (println "[mino-tests] test-fault-inject (simulated OOM)")
   (impl/run-clj-file "tests/run_fault_inject.clj"))

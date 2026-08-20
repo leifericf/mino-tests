@@ -37,6 +37,8 @@
                       :task mino-tests.tasks/tls-e2e}
    time-e2e          {:doc  "Time/date E2E: host date(1) + python3 datetime oracles vs the time prims"
                       :task mino-tests.tasks/time-e2e}
+   path-e2e          {:doc  "Path/glob E2E: find(1) + python3 glob/os.path oracles vs the path prims"
+                      :task mino-tests.tasks/path-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}
   test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"

@@ -63,6 +63,14 @@ jobs:
         run: ./mino/mino task tls-e2e
         timeout-minutes: 5
 
+      - name: Time/date E2E (external oracles)
+        # Host date(1) and python3 datetime/email.utils cross-checks
+        # for mino's time prims; skips lanes loudly when a tool is
+        # missing from PATH. Needs the submodule pin at mino commit
+        # 920f5eb2 or later (the time prims).
+        run: ./mino/mino task time-e2e
+        timeout-minutes: 5
+
       - name: Fault injection
         run: ./mino/mino tests/run_fault_inject.clj
 

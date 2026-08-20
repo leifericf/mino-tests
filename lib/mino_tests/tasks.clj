@@ -74,6 +74,10 @@
   (println "[mino-tests] tls-e2e (TLS E2E battery moved out of mino)")
   (impl/run-clj-file "tests/run_tls_e2e.clj"))
 
+(defn time-e2e [& _]
+  (println "[mino-tests] time-e2e (time/date external-oracle battery)")
+  (impl/run-clj-file "tests/run_time_e2e.clj"))
+
 (defn test-fault-inject [& _]
   (println "[mino-tests] test-fault-inject (simulated OOM)")
   (impl/run-clj-file "tests/run_fault_inject.clj"))

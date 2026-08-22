@@ -340,4 +340,22 @@
  ;; (clojuredocs-jvm-sandbox-N) while mino evaluates in user; the
  ;; printed var name carries the namespace.
  "clojure.core/into:13"           "sandbox namespace naming differs"
+
+ ;; --- full-corpus soak (nightly) divergences, all one class ---
+ ;;
+ ;; The smoke battery samples 50 examples; the nightly soak runs all
+ ;; 1309 and reaches these set-print/iteration-order examples. JVM
+ ;; Clojure and mino hash the same elements to different buckets, so
+ ;; any example that prints a multi-element set (or iterates one:
+ ;; keep over a set, remove over a set) diverges harmlessly. Same
+ ;; class as the existing cons:4 / conj:13-14 / merge-with:8 /
+ ;; clojure.set/union entries below.
+ "clojure.core/cons:3"            "set print order is impl-defined"
+ "clojure.core/conj:8"            "set print order is impl-defined"
+ "clojure.core/merge-with:9"      "set-valued map values print impl-defined"
+ "clojure.core/merge-with:10"     "set-valued map values print impl-defined"
+ "clojure.core/merge-with:11"     "set-valued map values print impl-defined"
+ "clojure.core/keep:8"            "set iteration order is impl-defined"
+ "clojure.core/remove:6"          "set iteration order is impl-defined"
+ "clojure.set/intersection:2"     "set print order is impl-defined"
 }

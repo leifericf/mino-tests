@@ -20,15 +20,25 @@
 (def mino-bin (or (getenv "MINO_BIN") "mino/mino"))
 (def lean-bin (or (getenv "MINO_LEAN_BIN") "mino/mino-lean"))
 
+(def ^:private jit-compiled-out-note-re
+  #"\s*mino: note: this build has the JIT compiled out[^\n]*\n?")
+
 (defn- run-program
-  "Spawn mino-bin with EXTRA-ARGS, eval PROGRAM, return :out trimmed."
+  "Spawn mino-bin with EXTRA-ARGS, eval PROGRAM, return :out trimmed.
+  sh merges stderr into :out; a build whose JIT is compiled out (the
+  plain-make binary on hosts where the pipeline needs an extra
+  platform define) prints an explicit note when --jit=on is forced.
+  The note documents the no-op, not a divergence, so strip it before
+  callers compare outputs."
   [extra-args program]
   (let [tmp (str "/tmp/mino-tests-jit-" (now-ms) "-" (rand-int 1000000) ".clj")]
     (spit tmp program)
     (let [argv (concat [mino-bin] extra-args [tmp])
           r    (apply sh argv)]
       (sh "rm" "-f" tmp)
-      (s/trim (or (:out r) "")))))
+      (-> (or (:out r) "")
+          (s/replace jit-compiled-out-note-re "")
+          s/trim))))
 
 ;; --- 1. Hot-path warmup parity ----------------------------------
 

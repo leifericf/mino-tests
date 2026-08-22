@@ -188,10 +188,14 @@
        " (println (pr-str " form-source ")))\n"))
 
 (defn- run-evaluator
-  "Run the mino binary with the given script. Returns {:out :exit}
-   from sh. Uses the timeout command to kill runaway evaluations."
+  "Run bb with the given script. Returns {:out :exit} from sh. The
+   timeout wrapper kills runaway evaluations: any example that takes
+   more than three seconds is looping or printing without bound and
+   is not useful as ground truth. Ground truth stays bb-derived (the
+   probe reads :bb-out and compares mino against it); mino parses
+   the corpus JSON."
   [script]
-  (let [result (sh "timeout" "3" "./mino/mino" "-e" script)]
+  (let [result (sh "timeout" "3" "bb" "-e" script)]
     {:out (str/trim-newline (or (:out result) ""))
      :exit (:exit result)}))
 
@@ -199,11 +203,12 @@
   (try
     (let [{:keys [out exit]} (run-evaluator (render-script tuple))]
       (cond
-        (not (zero? exit)) {:status :eval-fail}
-        (str/blank? out)   {:status :eval-empty}
-        :else              {:status :ok :eval-out out}))
+        (= exit 124)       {:status :bb-timeout}
+        (not (zero? exit)) {:status :bb-fail}
+        (str/blank? out)   {:status :bb-empty}
+        :else              {:status :ok :bb-out out}))
     (catch e
-      {:status :eval-throw})))
+      {:status :bb-throw})))
 
 ;; ---- Pipeline ----
 
@@ -226,7 +231,7 @@
         n-run (count runnable)
         n-skip (- n-total n-run)]
     (println "Parsed" n-total "tuples;" n-run "runnable," n-skip "triaged")
-    (println "Running mino on" n-run "tuples (this takes a few minutes)...")
+    (println "Running bb on" n-run "tuples (this takes a few minutes)...")
     (let [t0 (time-ms)
           enriched (vec
                     (for [[i t] (map-indexed vector runnable)]
@@ -239,7 +244,7 @@
           n-ok (count (filter #(= :ok (:status (:gt %))) enriched))
           n-fail (- n-run n-ok)
           elapsed-s (long (/ (- (time-ms) t0) 1000))]
-      (println "mino ran in" elapsed-s "s;" n-ok "produced ground truth," n-fail "couldn't")
+      (println "bb ran in" elapsed-s "s;" n-ok "produced ground truth," n-fail "couldn't")
       (println "Writing" out-path)
       (mkdir-p "tests/adv/fixtures")
       (spit out-path

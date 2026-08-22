@@ -329,4 +329,15 @@
  ;; BigInt when the result is a whole number, printing "1N". mino has
  ;; one integer tier and stays at :int -> prints "1".
  "clojure.core/+:5"               "no JVM-style ratio->bigint promotion"
+
+ ;; --- surfaced by the 2026-08-22 corpus refresh ---
+ ;;
+ ;; eduction:0 interleaves prn commentary with the realized results;
+ ;; the JVM ground-truth capture keeps only the result vector while
+ ;; mino's runner prints the side output too. Same class as mapv:5.
+ "clojure.core/eduction:0"        "side-effect print interleaves with results"
+ ;; into:13's def lands in the JVM sandbox namespace
+ ;; (clojuredocs-jvm-sandbox-N) while mino evaluates in user; the
+ ;; printed var name carries the namespace.
+ "clojure.core/into:13"           "sandbox namespace naming differs"
 }

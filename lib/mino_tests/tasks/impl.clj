@@ -485,16 +485,22 @@
    bugs whose appearance depends on the GC's major-phase × test-
    position alignment -- the precise alignment that hides the bug at
    nursery=4 MiB might surface it at 64 KiB. Adds ~4x suite runtime
-   but stays well under a minute total."
+   (perf-shape files excluded; see the env note below)."
   []
   (let [sizes [65536 262144 1048576 4194304]
         results
         ;; pipefail so a non-zero exit from mino propagates through
         ;; the tail -3 truncation (otherwise the tail's exit masks
-        ;; any test-suite abort).
+        ;; any test-suite abort). The perf-shape files are excluded:
+        ;; their budgets assume a default nursery, and under a 64 KiB
+        ;; one the allocation-heavy documents crawl through thousands
+        ;; of collections -- measuring the harness, not correctness,
+        ;; while eating the fuzz lane's runtime budget.
         (mapv (fn [sz]
                 (println "  gc-fuzz nursery=" sz "bytes")
-                (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]]
+                (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]
+                                      ["MINO_TEST_EXCLUDE"
+                                       "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test"]]
                                      "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -3")]
                   (println "    " (clojure.string/trim (or (:out r) "")))
                   {:nursery sz :exit (:exit r) :ok (zero? (:exit r))}))

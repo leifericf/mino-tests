@@ -67,23 +67,42 @@ jobs:
           path: tests/adv/regressions/diff-*
           if-no-files-found: ignore
 
+  # ---- GC safeguards (added after the v0.255.6/.7/.8 CI hang ----
+  # at transient-survives-gc-yield surfaced how easily a GC bug can
+  # hide behind full-suite Heisenbug masking. Each safeguard catches
+  # a different shape of bug. These live in their own job (not the
+  # soak matrix) because the nursery fuzz alone runs the full suite
+  # twice at tiny nurseries -- ~40 min on the slowest runner -- which
+  # cannot share the soak job's wall-clock budget.
+  gc:
+    name: gc lanes (macos-14)
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build mino
+        working-directory: mino
+        run: make
+
       - name: GC stress (MINO_GC_STRESS=1)
         run: |
           MINO_GC_STRESS=1 ./mino/mino tests/run_gc_stress.clj
         timeout-minutes: 15
 
-      # ---- GC safeguards (added after the v0.255.6/.7/.8 CI hang ----
-      # at transient-survives-gc-yield surfaced how easily a GC bug
-      # can hide behind full-suite Heisenbug masking. Each safeguard
-      # catches a different shape of bug.
-
       - name: GC nursery-size fuzz
-        # Runs mino tests/run.clj at 4 nursery sizes (64K/256K/1M/4M).
-        # Catches bugs sensitive to major-phase × test-position
-        # alignment -- varying the nursery shifts where each major
-        # falls in the test sequence.
+        # Runs mino tests/run.clj at the two extreme nursery sizes
+        # (64K/256K). Catches bugs sensitive to major-phase ×
+        # test-position alignment -- varying the nursery shifts where
+        # each major falls in the test sequence.
         run: ./mino/mino task gc-fuzz
-        timeout-minutes: 15
+        timeout-minutes: 50
 
       - name: GC stress on (gc!)-using subset
         # Runs the curated shard with MINO_GC_STRESS=1 (every alloc

@@ -82,6 +82,10 @@
   (println "[mino-tests] path-e2e (path/glob external-oracle battery)")
   (impl/run-clj-file "tests/run_path_e2e.clj"))
 
+(defn digest-e2e [& _]
+  (println "[mino-tests] digest-e2e (digest/HMAC/crc32 external-oracle battery)")
+  (impl/run-clj-file "tests/run_digest_e2e.clj"))
+
 (defn test-fault-inject [& _]
   (println "[mino-tests] test-fault-inject (simulated OOM)")
   (impl/run-clj-file "tests/run_fault_inject.clj"))

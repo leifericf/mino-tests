@@ -73,10 +73,19 @@ jobs:
 
       - name: Path/glob E2E
         # find(1) and python3 glob/os.path cross-checks for mino's
-        # path prims; skips lanes loudly when a tool is missing
-        # from PATH. Needs the submodule pin at mino commit
+        # path prims; skips lanes loudly when a tool is missing from
+        # PATH. Needs the submodule pin at mino commit
         # 782f4613 or later (the path prims).
         run: ./mino/mino task path-e2e
+        timeout-minutes: 5
+
+      - name: Digest/HMAC/crc32 E2E (external oracles)
+        # python3 hashlib/hmac/zlib cross-checks for mino's digest
+        # prims over LCG-generated blobs at hash block-boundary sizes;
+        # skips lanes loudly when python3 is missing from PATH. Needs
+        # the submodule pin at mino commit 24a28347 or later (the
+        # digest prims).
+        run: ./mino/mino task digest-e2e
         timeout-minutes: 5
 
       - name: Fault injection

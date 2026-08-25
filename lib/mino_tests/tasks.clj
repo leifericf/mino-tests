@@ -86,6 +86,10 @@
   (println "[mino-tests] digest-e2e (digest/HMAC/crc32 external-oracle battery)")
   (impl/run-clj-file "tests/run_digest_e2e.clj"))
 
+(defn html-e2e [& _]
+  (println "[mino-tests] html-e2e (html/xml binary-level battery, campaign p6t3)")
+  (impl/run-clj-file "tests/run_html_e2e.clj"))
+
 (defn test-fault-inject [& _]
   (println "[mino-tests] test-fault-inject (simulated OOM)")
   (impl/run-clj-file "tests/run_fault_inject.clj"))

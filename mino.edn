@@ -41,6 +41,8 @@
                        :task mino-tests.tasks/path-e2e}
     digest-e2e        {:doc  "Digest/HMAC/crc32 E2E: python3 hashlib/hmac/zlib oracles vs the digest prims"
                        :task mino-tests.tasks/digest-e2e}
+    html-e2e          {:doc  "HTML/XML E2E: parse/select/serialize through the real binary (html-xml campaign)"
+                       :task mino-tests.tasks/html-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}
   test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"

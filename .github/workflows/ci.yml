@@ -88,6 +88,16 @@ jobs:
         run: ./mino/mino task digest-e2e
         timeout-minutes: 5
 
+      - name: HTML/XML E2E (binary-level)
+        # Parses, selects, and serializes the html-xml campaign
+        # fixtures through the real ./mino binary in child processes;
+        # asserts exit codes, deterministic counts, and the strict-XML
+        # error contract across the process boundary. Needs the
+        # submodule pin at the html-xml campaign tip (mino.html,
+        # mino.html.select, clojure.xml, the fixture generators).
+        run: ./mino/mino task html-e2e
+        timeout-minutes: 5
+
       - name: Fault injection
         run: ./mino/mino tests/run_fault_inject.clj
 

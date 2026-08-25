@@ -485,7 +485,8 @@
    whose appearance depends on the GC's major-phase × test-position
    alignment -- the precise alignment that hides the bug at the
    default nursery might surface it at 64 KiB. Runs the two extreme
-   sizes (perf-shape files excluded; see the env note below)."
+   sizes (perf-shape and fuzz files excluded; see the env note
+   below)."
   []
   ;; The two extreme sizes carry nearly all of the alignment variety
   ;; (the 1M/4M runs sit close to the default nursery the ordinary
@@ -504,8 +505,8 @@
                 (println "  gc-fuzz nursery=" sz "bytes")
                 (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]
                                       ["MINO_TEST_EXCLUDE"
-                                       "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test"]]
-                                     "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -3")]
+                                       "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test"]
+                                      "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -3")]
                   (println "    " (clojure.string/trim (or (:out r) "")))
                   {:nursery sz :exit (:exit r) :ok (zero? (:exit r))}))
               sizes)

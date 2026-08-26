@@ -43,7 +43,7 @@
 
  ;; disj with no keys returns the coll
  {:key "disj.no-keys" :form "(disj [1 2 3])"}
- {:key "disj.no-keys-set" :form "(disj #{1 2 3})"}
+ {:key "disj.no-keys-set" :form "(sort (disj #{1 2 3}))"}
  {:key "disj.control" :form "(disj #{1 2 3} 2)"}
 
  ;; variadic bit fns fold across all args

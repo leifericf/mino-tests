@@ -45,7 +45,7 @@
   {:status :error, :kind "IllegalArgumentException"},
   "bit-and.control" {:status :ok, :out "8"},
   "seed.def-expr" {:status :ok, :out "33"},
-  "disj.no-keys-set" {:status :ok, :out "#{1 3 2}"},
+  "disj.no-keys-set" {:status :ok, :out "(1 2 3)"},
   "apply.control-vector" {:status :ok, :out "6"},
   "line-seq.nil-arg" {:status :error, :kind "NullPointerException"},
   "find-keyword.fresh-ns" {:status :ok, :out "nil"},

@@ -4,12 +4,6 @@
 ;; then a prefix covering every probe beneath it. As each mino fix
 ;; lands, its entries are deleted and the probes must pass.
 {"apply.nonseq-tail" "fix: apply non-seqable tail"
- "char-array.from-string" "fix: char-array from string"
- "disj.no-keys" "fix: disj no keys"
- "disj.no-keys-set" "fix: disj no keys"
- "char-array.sized-init" "fix: sized char-array"
- "double-array.sized-init" "fix: sized double-array"
- "replace.transducer" "fix: replace transducer"
  "destructure.bare-string" "fix: destructure passthrough"
  "str.float-exp" "fix: str float path"
  "syntax-quote.unresolvable" "fix: syntax-quote qualification"

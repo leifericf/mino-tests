@@ -1,0 +1,6 @@
+;; Allowlist for the jvm-core differential probe. Keys are probe keys
+;; ("ns/var:aspect"); values are the owning fix or documented
+;; divergence. Two-tier lookup in diff_jvm_core.clj: exact key first,
+;; then a prefix covering every probe beneath it. As each mino fix
+;; lands, its entries are deleted and the probes must pass.
+{}

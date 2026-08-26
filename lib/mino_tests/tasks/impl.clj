@@ -672,3 +672,20 @@
       (catch e
         (println "  clojuredocs-refresh failed:" (str e))
         1))))
+
+;; ---- JVM core ground-truth refresh ----
+
+(defn jvm-core-refresh
+  "Re-run the jvm-core probe corpus through real JVM Clojure and
+   overwrite tests/adv/fixtures/jvm-core-jvm.edn. Dev-host only:
+   needs the clojure CLI on PATH; CI uses the committed fixture."
+  []
+  (let [script (str (repo-root) "/tests/adv/jvm_core_capture.clj")]
+    (println "  exec: clojure -M" script)
+    (try
+      (let [r (sh "clojure" "-M" script)]
+        (println (:out r))
+        (if (zero? (:exit r)) 0 1))
+      (catch e
+        (println "  jvm-core-refresh failed:" (str e))
+        1))))

@@ -1,0 +1,10 @@
+{:probes 8,
+ :outputs
+ {"seed.int-add" {:status :ok, :out "3"},
+  "seed.str-cat" {:status :ok, :out "\"a1:k\""},
+  "seed.vec-range" {:status :ok, :out "[0 1 2]"},
+  "seed.map-literal" {:status :ok, :out "{:a 1, :b 2}"},
+  "seed.nth-oob" {:status :error, :kind "IndexOutOfBoundsException"},
+  "seed.def-expr" {:status :ok, :out "33"},
+  "seed.if-let" {:status :ok, :out ":no"},
+  "seed.reduce" {:status :ok, :out "6"}}}

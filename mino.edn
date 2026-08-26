@@ -61,5 +61,7 @@
                        :task mino-tests.tasks/clojuredocs-refresh}
   clojuredocs-summary {:doc "Run diff probes and emit output/clojuredocs-results.edn"
                        :task mino-tests.tasks/clojuredocs-summary}
+  jvm-core-refresh  {:doc "Re-capture JVM Clojure ground truth for the core diff probe"
+                     :task mino-tests.tasks/jvm-core-refresh}
   cov-summary      {:doc "Run llvm-cov pass and emit output/coverage-summary.edn"
                     :task mino-tests.tasks/cov-summary}}}

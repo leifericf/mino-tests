@@ -1,0 +1,16 @@
+;; Seed corpus for the core differential probe. Each probe is
+;; {:key ... :form ... :isolated ...}. :isolated true runs the probe
+;; in its own mino process because it mutates namespace state (def,
+;; intern, syntax-quote resolution) that a later probe in the same
+;; chunk would observe.
+;;
+;; The full corpus lands separately; this seed proves the pipeline
+;; end to end with probes every runtime agrees on.
+[{:key "seed.int-add" :form "(+ 1 2)"}
+ {:key "seed.str-cat" :form "(str \"a\" 1 :k)"}
+ {:key "seed.vec-range" :form "(vec (range 3))"}
+ {:key "seed.map-literal" :form "{:a 1 :b 2}"}
+ {:key "seed.nth-oob" :form "(nth [1 2] 5)"}
+ {:key "seed.def-expr" :form "(do (def seed-x 33) seed-x)" :isolated true}
+ {:key "seed.if-let" :form "(if-let [v nil] :yes :no)"}
+ {:key "seed.reduce" :form "(reduce + [1 2 3])"}]

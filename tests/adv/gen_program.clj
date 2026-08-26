@@ -189,6 +189,29 @@
               (gen-body-expr (dec depth)))
         0))
 
+(defn- gen-def-expr
+  "def in expression position. The def's own return value is never
+   observed (tree and byte-compiler disagree on it today); the bound
+   name is used by a following body expression so the compile paths
+   still carry the intern. The name stays in scope for the rest of
+   the enclosing defn body and no further."
+  [depth]
+  (let [sym (fresh-local)
+        _   (push-locals [sym])]
+    (list 'do (list 'def sym (gen-body-expr (dec depth)))
+          (gen-body-expr (dec depth)))))
+
+(defn- gen-try-expr
+  "Bare-clause catch over a throwing numeric arm. The fallback is a
+   numeric expression that ignores the bound error, so every mode
+   prints the same value."
+  [depth]
+  (let [risky (case (mod (abs (next-u32)) 2)
+                0 (list 'quot (gen-body-expr (dec depth)) 0)
+                1 (list 'nth [] (gen-int 1 9)))
+        fallback (gen-body-expr (dec depth))]
+    (list 'try risky (list 'catch 'e fallback))))
+
 (defn gen-body-expr
   "Return one expression. At depth 0 falls back to gen-leaf so the
    tree is bounded. Choice of constructor is uniform over what fits
@@ -196,14 +219,16 @@
   [depth]
   (if (<= depth 0)
     (gen-leaf)
-    (case (mod (abs (next-u32)) 7)
+    (case (mod (abs (next-u32)) 9)
       0 (gen-arith-expr depth)
       1 (gen-if-expr depth)
       2 (gen-let-form depth)
       3 (gen-loop-form depth)
       4 (gen-call-expr depth)
       5 (gen-when-expr depth)
-      6 (gen-leaf))))
+      6 (gen-leaf)
+      7 (gen-def-expr depth)
+      8 (gen-try-expr depth))))
 
 ;; --- printable string and collection forms ---
 ;;
@@ -274,9 +299,13 @@
   (let [name  (gen-fn-name i)
         arity (inc (mod (abs (next-u32)) gen-max-arity))
         params (vec (map #(symbol (str "p" %)) (range arity)))
+        ;; def names introduced inside the body are scoped to this
+        ;; defn; restoring the snapshot keeps later defns from
+        ;; referencing names their bodies never interned
+        saved-locals (vec (:locals @*gen-ctx*))
         _ (push-locals params)
         body (gen-body-expr gen-max-depth)
-        _ (pop-locals arity)
+        _ (swap! *gen-ctx* assoc :locals saved-locals)
         _ (add-defn name arity)]
     (list 'defn name params body)))
 

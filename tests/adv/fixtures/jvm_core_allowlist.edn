@@ -4,18 +4,9 @@
 ;; then a prefix covering every probe beneath it. As each mino fix
 ;; lands, its entries are deleted and the probes must pass.
 {"apply.nonseq-tail" "fix: apply non-seqable tail"
- "line-seq.non-stream" "fix: line-seq non-stream arg"
- "line-seq.nil-arg" "fix: line-seq non-stream arg"
  "char-array.from-string" "fix: char-array from string"
- "find-keyword.absent" "fix: find-keyword lookup only"
- "find-keyword.fresh-literal" "fix: find-keyword lookup only"
- "find-keyword.fresh-ns" "fix: find-keyword lookup only"
  "disj.no-keys" "fix: disj no keys"
  "disj.no-keys-set" "fix: disj no keys"
- "bit-and.three-args" "fix: variadic bit fns"
- "bit-or.three-args" "fix: variadic bit fns"
- "bit-xor.three-args" "fix: variadic bit fns"
- "bit-and-not.three-args" "fix: variadic bit fns"
  "char-array.sized-init" "fix: sized char-array"
  "double-array.sized-init" "fix: sized double-array"
  "replace.transducer" "fix: replace transducer"

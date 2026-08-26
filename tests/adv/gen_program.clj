@@ -205,6 +205,66 @@
       5 (gen-when-expr depth)
       6 (gen-leaf))))
 
+;; --- printable string and collection forms ---
+;;
+;; Strings and collections appear only at printable positions (the
+;; final println, do-body tails). They never bind locals and never
+;; feed arithmetic: a string reaching (+ a b) would make every mode
+;; print an error where the quad wants a deterministic value.
+;;
+;; Every constructor here is bounded by construction. The infinite
+;; forms are excluded outright, never guarded at runtime:
+;;   (range) 0-arity, (repeat x) 1-arity, cycle, iterate, repeatedly,
+;;   partition* and take-nth with a step of 0.
+
+(def ^:private gen-strings ["a" "xy" "abc" "hello" "" "z9"])
+(def ^:private gen-nonempty-strings ["a" "xy" "abc" "hello" "z9"])
+
+(defn- gen-string-literal []
+  (nth gen-strings (mod (abs (next-u32)) (count gen-strings))))
+
+(defn- gen-string-expr
+  "String-valued expression. subs bounds are derived arithmetically
+   from the chosen literal so 0 <= a < b <= count is structural."
+  []
+  (case (mod (abs (next-u32)) 4)
+    0 (list 'str (gen-string-literal) (gen-string-literal))
+    1 (list 'count (gen-string-literal))
+    2 (let [s (nth gen-nonempty-strings
+                   (mod (abs (next-u32)) (count gen-nonempty-strings)))
+            len (count s)
+            a (mod (abs (next-u32)) len)
+            b (+ a 1 (mod (abs (next-u32)) (- len a)))]
+        (list 'subs s a b))
+    3 (list 'str (gen-int-near-boundary) (gen-string-literal))))
+
+(defn- gen-coll-expr
+  "Collection-valued expression. range always carries two literal
+   bounds with a positive span; repeat is always the 2-arity bounded
+   form; nth indexes a literal vector at a generated in-bounds
+   offset."
+  []
+  (case (mod (abs (next-u32)) 4)
+    0 (let [a (gen-int 0 3)
+            b (+ a 1 (mod (abs (next-u32)) 6))]
+        (list 'vec (list 'range a b)))
+    1 (list 'vec (list 'repeat (inc (mod (abs (next-u32)) 4))
+                       (gen-int-near-boundary)))
+    2 (let [v [(gen-int-near-boundary)
+               (gen-int-near-boundary)
+               (gen-int-near-boundary)]]
+        (list 'nth v (mod (abs (next-u32)) 3)))
+    3 (list 'conj [(gen-int-near-boundary)] (gen-string-literal))))
+
+(defn- gen-printable-expr
+  "Expression for printable-only positions: numeric bodies plus the
+   string and collection constructors."
+  [depth]
+  (case (mod (abs (next-u32)) 3)
+    0 (gen-body-expr depth)
+    1 (gen-string-expr)
+    2 (gen-coll-expr)))
+
 ;; --- top-level program ---
 
 (defn- gen-fn-name [i]
@@ -233,7 +293,7 @@
   (reset-ctx!)
   (let [n-defns (inc (mod (abs (next-u32)) gen-max-defns))
         defns   (vec (for [i (range n-defns)] (gen-defn i)))
-        final   (gen-body-expr gen-max-depth)
+        final   (gen-printable-expr gen-max-depth)
         forms   (conj defns (list 'println final))]
     (apply str (interpose "\n" (map pr-str forms)))))
 

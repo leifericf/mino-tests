@@ -4,9 +4,6 @@
 ;; then a prefix covering every probe beneath it. As each mino fix
 ;; lands, its entries are deleted and the probes must pass.
 {"apply.nonseq-tail" "fix: apply non-seqable tail"
- "destructure.bare-string" "fix: destructure passthrough"
- "str.float-exp" "fix: str float path"
- "syntax-quote.unresolvable" "fix: syntax-quote qualification"
  "def.var-roundtrip" "fix: def returns var"
  "clojure-string.bare-capitalize" "fix: clojure.string preload"
  "clojure-string.bare-reverse" "fix: clojure.string preload"

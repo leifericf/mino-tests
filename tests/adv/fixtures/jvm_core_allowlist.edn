@@ -5,8 +5,6 @@
 ;; lands, its entries are deleted and the probes must pass.
 {"apply.nonseq-tail" "fix: apply non-seqable tail"
  "def.var-roundtrip" "fix: def returns var"
- "clojure-string.bare-capitalize" "fix: clojure.string preload"
- "clojure-string.bare-reverse" "fix: clojure.string preload"
  "catch.class-slot" "fix: classed catch"
  "catch.class-binding" "fix: classed catch"
  "meta.arglists-map" "fix: arglists metadata"

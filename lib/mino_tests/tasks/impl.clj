@@ -504,8 +504,8 @@
         (mapv (fn [sz]
                 (println "  gc-fuzz nursery=" sz "bytes")
                 (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]
-                                      ["MINO_TEST_EXCLUDE"
-                                       "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test,compress_perf_test,zip_perf_test"]]
+                                       ["MINO_TEST_EXCLUDE"
+                                        "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test,compress_perf_test,zip_perf_test,zip_fuzz_test"]]
                                       "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -3")]
                   (println "    " (clojure.string/trim (or (:out r) "")))
                   {:nursery sz :exit (:exit r) :ok (zero? (:exit r))}))

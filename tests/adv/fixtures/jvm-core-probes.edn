@@ -1,16 +1,114 @@
-;; Seed corpus for the core differential probe. Each probe is
-;; {:key ... :form ... :isolated ...}. :isolated true runs the probe
-;; in its own mino process because it mutates namespace state (def,
-;; intern, syntax-quote resolution) that a later probe in the same
-;; chunk would observe.
+;; Core differential probe corpus. Each probe is
+;; {:key ... :form ... :isolated ...}; :isolated true runs the probe
+;; in its own mino process (it mutates namespace state a later probe
+;; in the chunk would observe).
 ;;
-;; The full corpus lands separately; this seed proves the pipeline
-;; end to end with probes every runtime agrees on.
-[{:key "seed.int-add" :form "(+ 1 2)"}
+;; Rules for adding probes:
+;; - Deterministic printed output only: no rand/time/version fns, no
+;;   hash-order printing (wrap in vec/sort/counts), no real streams.
+;; - Every probe must be readable and evaluable by real JVM Clojure
+;;   (the capture script evaluates it in a fresh user ns).
+;; - Key prefixes name the owning area; the allowlist uses them.
+[;; seed / positive controls
+ {:key "seed.int-add" :form "(+ 1 2)"}
  {:key "seed.str-cat" :form "(str \"a\" 1 :k)"}
  {:key "seed.vec-range" :form "(vec (range 3))"}
  {:key "seed.map-literal" :form "{:a 1 :b 2}"}
  {:key "seed.nth-oob" :form "(nth [1 2] 5)"}
  {:key "seed.def-expr" :form "(do (def seed-x 33) seed-x)" :isolated true}
  {:key "seed.if-let" :form "(if-let [v nil] :yes :no)"}
- {:key "seed.reduce" :form "(reduce + [1 2 3])"}]
+ {:key "seed.reduce" :form "(reduce + [1 2 3])"}
+
+ ;; apply: non-seqable tail must throw (JVM), not compute
+ {:key "apply.nonseq-tail" :form "(apply inc 1 1)"}
+ {:key "apply.tail-string" :form "(apply str \"a\" \"bc\")"}
+ {:key "apply.control-vector" :form "(apply + 1 [2 3])"}
+ {:key "apply.control-nil-tail" :form "(apply conj [1] nil)"}
+
+ ;; line-seq: non-stream arg must throw, never read stdin
+ {:key "line-seq.non-stream" :form "(line-seq 1)"}
+ {:key "line-seq.nil-arg" :form "(line-seq nil)"}
+
+ ;; char-array from string counts every codepoint
+ {:key "char-array.from-string" :form "(count (char-array \"ab\"))"}
+ {:key "char-array.from-empty" :form "(count (char-array \"\"))"}
+ {:key "char-array.sized-init" :form "(count (char-array 3 \\a))"}
+ {:key "char-array.seq-of-chars" :form "(count (char-array [\\a \\b \\c]))"}
+
+ ;; find-keyword is lookup-only, never interns
+ {:key "find-keyword.absent" :form "(find-keyword \"zz-no-such-kw\")"}
+ {:key "find-keyword.fresh-literal" :form "(find-keyword \"alpha\")"}
+ {:key "find-keyword.fresh-ns" :form "(find-keyword \"beta\" \"kk\")"}
+ {:key "find-keyword.prior-use" :form "(do (keyword \"gamma-prior\") (find-keyword \"gamma-prior\"))"}
+
+ ;; disj with no keys returns the coll
+ {:key "disj.no-keys" :form "(disj [1 2 3])"}
+ {:key "disj.no-keys-set" :form "(disj #{1 2 3})"}
+ {:key "disj.control" :form "(disj #{1 2 3} 2)"}
+
+ ;; variadic bit fns fold across all args
+ {:key "bit-and.three-args" :form "(bit-and 12 10 6)"}
+ {:key "bit-or.three-args" :form "(bit-or 1 2 4)"}
+ {:key "bit-xor.three-args" :form "(bit-xor 1 3 7)"}
+ {:key "bit-and-not.three-args" :form "(bit-and-not 15 3 1)"}
+ {:key "bit-and.control" :form "(bit-and 12 10)"}
+
+ ;; sized array ctors with init
+ {:key "double-array.sized-init" :form "(count (double-array 3 1.5))"}
+ {:key "double-array.control" :form "(count (double-array [1 2]))"}
+
+ ;; replace 1-arity transducer
+ {:key "replace.transducer" :form "(into [] (replace {:a 1}) [:a :b])"}
+ {:key "replace.control" :form "(replace {:a 1} [:a :b])"}
+
+ ;; destructure passes non-vector binding forms through
+ {:key "destructure.bare-string" :form "(destructure \"s\")"}
+ {:key "destructure.bare-keyword" :form "(destructure :k)"}
+ {:key "destructure.control" :form "(destructure '[a b])"}
+
+ ;; str on floats goes through the pr-str path
+ {:key "str.float-exp" :form "(str 1e21)"}
+ {:key "str.float-small" :form "(str 1.5)"}
+ {:key "pr-str.float-exp" :form "(pr-str 1e21)"}
+
+ ;; syntax-quote qualifies unresolvable syms to the current ns
+ {:key "syntax-quote.unresolvable" :form "(seq (map str `(sqx b)))" :isolated true}
+ {:key "syntax-quote.resolvable" :form "`(map inc)" :isolated true}
+
+ ;; clojure.string resolves without require
+ {:key "clojure-string.bare-upper" :form "(clojure.string/upper-case \"abc\")"}
+ {:key "clojure-string.bare-capitalize" :form "(clojure.string/capitalize \"abc\")"}
+ {:key "clojure-string.bare-reverse" :form "(clojure.string/reverse \"abc\")"}
+
+ ;; def returns the var (special-forms tier, later phase)
+ {:key "def.var-return" :form "(var? (def jv-x 33))" :isolated true}
+ {:key "def.var-print" :form "(str (def jv-y 33))" :isolated true}
+ {:key "def.var-roundtrip" :form "(do (def jv-a1 33) (def jv-b1 (def jv-a1 33)) (var? jv-b1))" :isolated true}
+ {:key "def.value-still" :form "(do (def jv-z 44) jv-z)" :isolated true}
+
+ ;; catch with a class slot dispatches (later phase)
+ {:key "catch.class-slot" :form "(try (throw (ex-info \"boom\" {:a 1})) (catch Exception e :caught))"}
+ {:key "catch.class-binding" :form "(try (throw (ex-info \"boom\" {:a 1})) (catch Exception e (ex-data e)))"}
+
+ ;; var metadata :arglists (later phase)
+ {:key "meta.arglists-map" :form "(boolean (:arglists (meta #'map)))"}
+ {:key "meta.arglists-defn" :form "(boolean (:arglists (meta #'first)))"}
+
+ ;; designed leniencies: documented, permanent allowlist entries
+ {:key "lenient.distinct-set" :form "(vec (distinct #{1 2 3}))"}
+ {:key "lenient.satisfies-garbage" :form "(satisfies? 5 5)"}
+ {:key "lenient.re-seq-string-pattern" :form "(re-seq \"a\" \"abc\")"}
+ {:key "lenient.identical-strings" :form "(identical? \"ab-cid\" \"ab-cid\")"}
+ {:key "lenient.chunked-range" :form "(chunked-seq? (range 5))"}
+ {:key "lenient.atom-repr" :form "(subs (str (atom 1)) 0 5)"}
+
+ ;; mechanical sweep sample: arity edges on shared vars
+ {:key "sweep.inc-0" :form "(inc)"}
+ {:key "sweep.max-0" :form "(max)"}
+ {:key "sweep.assoc-1" :form "(assoc {})"}
+ {:key "sweep.empty-plus" :form "(+)"}
+ {:key "sweep.empty-conj" :form "(conj)"}
+ {:key "sweep.mapcat-1" :form "(fn? (mapcat [1 2]))"}
+ {:key "sweep.partial-1" :form "((partial + 1) 2)"}
+ {:key "sweep.comp-0" :form "((comp) 5)"}
+ {:key "sweep.repeat-2" :form "(vec (repeat 3 7))"}]

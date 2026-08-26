@@ -1,6 +1,20 @@
 # Changelog
 
-## Unreleased — JVM-Clojure ground truth alongside bb
+## Unreleased — zip/gzip binary-level E2E; JVM-Clojure ground truth
+
+New `zip-e2e` task (compression-zip campaign p6t2): rebuilds the
+campaign's frozen write-golden archive (default and forced-zip64
+shapes) and a fixed gzip member through the real pinned binary in
+child processes, once per timezone (unset, UTC, New York, Tokyo,
+Kiritimati) and across every locatable build (the submodule
+bootstrap build, `mino-lean`, an adjacent dev checkout). Every run
+must exit 0 with byte-identical stdout and reproduce the
+dev-frozen archive sha — the UTC timestamp decision's real proof:
+the archive bytes cannot vary with the runner's timezone. The
+gc-fuzz exclude seam now carries the campaign's perf and fuzz
+files (`compress_perf_test`, `zip_perf_test`, `zip_fuzz_test`),
+and the mino submodule pin moves to the compression-zip campaign
+tip.
 
 The ClojureDocs diff probe now compares mino against **both** bb and
 JVM Clojure ground truth. bb is fast and ubiquitous in CI; JVM Clojure

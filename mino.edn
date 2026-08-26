@@ -43,6 +43,8 @@
                        :task mino-tests.tasks/digest-e2e}
     html-e2e          {:doc  "HTML/XML E2E: parse/select/serialize through the real binary (html-xml campaign)"
                        :task mino-tests.tasks/html-e2e}
+    zip-e2e           {:doc  "Zip/gzip E2E: frozen archive round trip through the real binary across timezones (compression-zip campaign)"
+                       :task mino-tests.tasks/zip-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}
   test-gc-stress    {:doc  "GC stability under MINO_GC_STRESS=1 (moved from mino in v0.253.1)"

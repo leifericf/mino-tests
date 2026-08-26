@@ -98,6 +98,17 @@ jobs:
         run: ./mino/mino task html-e2e
         timeout-minutes: 5
 
+      - name: Zip/gzip E2E (binary-level)
+        # Rebuilds the compression-zip campaign's frozen write-golden
+        # archive and a fixed gzip member through the real ./mino
+        # binary in child processes, one run per timezone (plus the
+        # mino-lean build): byte-identical stdout across every run is
+        # the UTC timestamp decision's real proof. Needs the submodule
+        # pin at the compression-zip campaign tip (zip/compress prims,
+        # the frozen goldens).
+        run: ./mino/mino task zip-e2e
+        timeout-minutes: 5
+
       - name: Fault injection
         run: ./mino/mino tests/run_fault_inject.clj
 

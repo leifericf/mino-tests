@@ -60,6 +60,9 @@
 (require-with-progress "tests/migrated/bc_jit_deopt_test")
 (require-with-progress "tests/migrated/spawn_stress_regression")
 
+;; --- C-prim :arglists metadata (ADR 34) ---
+(require-with-progress "tests/migrated/arglists_test")
+
 (reset! clojure.test/suite-mode false)
 
 (log-progress "suite" "starting run-tests-and-exit")

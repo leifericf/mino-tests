@@ -68,6 +68,29 @@
   (is (= '([a new-state & options])
          (:arglists (meta #'clojure.core/restart-agent)))))
 
+;; The trivial missing arities the JVM oracle accepts: (require) and
+;; (use) take the zero arity but reject it with a value error like
+;; the JVM, and (disj! s) returns the set unchanged. Two-arity
+;; removal on a real transient, and the nonexistent-ns throw, still
+;; behave as before. The three vars carry their census-oracle
+;; arglists.
+(deftest arglists-trivial-arities
+  (is (thrown? (clojure.core/require)))
+  (is (not= "MAR001"
+            (try (clojure.core/require)
+                 (catch Throwable e (get e :mino/code)))))
+  (is (thrown? (clojure.core/use)))
+  (is (not= "MAR001"
+            (try (clojure.core/use)
+                 (catch Throwable e (get e :mino/code)))))
+  (is (= #{:a} (clojure.core/disj! #{:a})))
+  (is (= '([& args]) (:arglists (meta #'clojure.core/require))))
+  (is (= '([& args]) (:arglists (meta #'clojure.core/use))))
+  (is (= '([set] [set key] [set key & ks])
+         (:arglists (meta #'clojure.core/disj!))))
+  (is (= #{} (persistent! (disj! (transient #{:a}) :a))))
+  (is (thrown? (clojure.core/require :nonexistent-ns-xyz))))
+
 (deftest arglists-defn-baseline
   (is (:arglists (meta #'clojure.core/map))))
 

@@ -54,9 +54,10 @@
   (is (= {:a 1} (array-map :a 1)))
   (is (= 2 (get-in {:a {:b 2}} [:a :b]))))
 
-;; A dangling key-value or option tail is a value-type error, not an
-;; arity error: the call must throw, the error code must not be the
-;; arity code MAR001, and the prims carry their oracle arglists.
+;; A dangling key-value or option tail, or an unknown option key, is a
+;; value-type error, not an arity error: the call must throw, the error
+;; code must not be the arity code MAR001, and the prims carry their
+;; oracle arglists.
 (deftest arglists-dangling-kv
   (is (thrown? (clojure.core/hash-map :a)))
   (is (not= "MAR001"
@@ -92,6 +93,17 @@
   (is (not= "MAR001"
             (try (clojure.core/restart-agent :ag :state :dispatch)
                  (catch Throwable e (get e :mino/code)))))
+  ;; ref's option tail is in-signature: unknown keys and dangling
+  ;; tails are value errors, and a well-formed tail constructs a ref.
+  (is (thrown? (clojure.core/ref :s :bogus 1)))
+  (is (not= "MAR001"
+            (try (clojure.core/ref :s :bogus 1)
+                 (catch Throwable e (get e :mino/code)))))
+  (is (thrown? (clojure.core/ref :s :max-history)))
+  (is (not= "MAR001"
+            (try (clojure.core/ref :s :max-history)
+                 (catch Throwable e (get e :mino/code)))))
+  (is (ref? (clojure.core/ref :s :max-history 10)))
   (is (= '([] [& keyvals]) (:arglists (meta #'clojure.core/hash-map))))
   (is (= '([& keyvals]) (:arglists (meta #'clojure.core/sorted-map))))
   (is (= '([comparator & keyvals])
@@ -142,7 +154,7 @@
   (is (= '([] [coll] [coll x]) (:arglists (meta #'clojure.core/conj!))))
   (is (= '([f]) (:arglists (meta #'clojure.core/slurp))))
   (is (= '([sym]) (:arglists (meta #'clojure.core/resolve))))
-  (is (= '([x]) (:arglists (meta #'clojure.core/ref))))
+  (is (= '([x] [x & options]) (:arglists (meta #'clojure.core/ref))))
   (is (= '([array idx]) (:arglists (meta #'clojure.core/aget))))
   (is (= '([array idx val]) (:arglists (meta #'clojure.core/aset))))
   (is (= '([binding-map f]) (:arglists (meta #'clojure.core/with-bindings*))))

@@ -202,15 +202,16 @@
           (gen-body-expr (dec depth)))))
 
 (defn- gen-try-expr
-  "Bare-clause catch over a throwing numeric arm. The fallback is a
+  "Classed catch over a throwing numeric arm. The fallback is a
    numeric expression that ignores the bound error, so every mode
-   prints the same value."
+   prints the same value. Throwable exercises the classed-clause
+   dispatcher on all four modes."
   [depth]
   (let [risky (case (mod (abs (next-u32)) 2)
                 0 (list 'quot (gen-body-expr (dec depth)) 0)
                 1 (list 'nth [] (gen-int 1 9)))
         fallback (gen-body-expr (dec depth))]
-    (list 'try risky (list 'catch 'e fallback))))
+    (list 'try risky (list 'catch 'Throwable 'e fallback))))
 
 (defn gen-body-expr
   "Return one expression. At depth 0 falls back to gen-leaf so the

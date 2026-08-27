@@ -190,15 +190,18 @@
         0))
 
 (defn- gen-def-expr
-  "def in expression position. The def's own return value is never
-   observed (tree and byte-compiler disagree on it today); the bound
-   name is used by a following body expression so the compile paths
-   still carry the intern. The name stays in scope for the rest of
-   the enclosing defn body and no further."
+  "def in expression position. The def's return value is observed
+   (var? pins the Var-return contract across all four tiers) and the
+   bound name is used by a following body expression so the compile
+   paths also carry the intern. The name stays in scope for the rest
+   of the enclosing defn body and no further."
   [depth]
   (let [sym (fresh-local)
         _   (push-locals [sym])]
-    (list 'do (list 'def sym (gen-body-expr (dec depth)))
+    (list 'do
+          (list 'if (list 'var? (list 'def sym
+                                      (gen-body-expr (dec depth))))
+                1 0)
           (gen-body-expr (dec depth)))))
 
 (defn- gen-try-expr

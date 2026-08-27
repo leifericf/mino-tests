@@ -84,6 +84,8 @@
  {:key "def.var-return" :form "(var? (def jv-x 33))" :isolated true}
  {:key "def.var-print" :form "(str (def jv-y 33))" :isolated true}
  {:key "def.var-roundtrip" :form "(do (def jv-a1 33) (def jv-b1 (def jv-a1 33)) (var? jv-b1))" :isolated true}
+ {:key "def.var-in-fn" :form "((fn [] (var? (def jv-f1 33))))" :isolated true}
+ {:key "def.var-roundtrip-fn" :form "((fn [] (def jv-g1 33) (def jv-g2 (def jv-g1 33)) (var? jv-g2)))" :isolated true}
  {:key "def.value-still" :form "(do (def jv-z 44) jv-z)" :isolated true}
 
  ;; catch with a class slot dispatches (later phase)

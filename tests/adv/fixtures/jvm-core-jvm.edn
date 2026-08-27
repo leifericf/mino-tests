@@ -1,4 +1,4 @@
-{:probes 68,
+{:probes 70,
  :outputs
  {"line-seq.non-stream" {:status :error, :kind "ClassCastException"},
   "def.var-roundtrip" {:status :ok, :out "true"},
@@ -8,6 +8,7 @@
   "sweep.max-0" {:status :error, :kind "ArityException"},
   "lenient.atom-repr" {:status :ok, :out "\"cloju\""},
   "sweep.empty-conj" {:status :ok, :out "[]"},
+  "def.var-in-fn" {:status :ok, :out "true"},
   "seed.int-add" {:status :ok, :out "3"},
   "find-keyword.fresh-literal" {:status :ok, :out "nil"},
   "seed.str-cat" {:status :ok, :out "\"a1:k\""},
@@ -62,6 +63,7 @@
   "catch.class-slot" {:status :ok, :out ":caught"},
   "str.float-small" {:status :ok, :out "\"1.5\""},
   "sweep.empty-plus" {:status :ok, :out "0"},
+  "def.var-roundtrip-fn" {:status :ok, :out "true"},
   "bit-and-not.three-args" {:status :ok, :out "12"},
   "apply.tail-string" {:status :ok, :out "\"abc\""},
   "lenient.satisfies-garbage"

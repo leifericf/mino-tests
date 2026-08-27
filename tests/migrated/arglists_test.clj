@@ -1,9 +1,10 @@
 (require "tests/test")
 
 ;; :arglists metadata on C-primitive vars, installed at startup from
-;; the generated table (ADR 34). Special-form macros and core.clj def
-;; aliases (let, interleave, ...) carry no table entry yet, so they
-;; must still read as nil here.
+;; the generated table (ADR 34). Special-form macros carry the census
+;; oracle shapes stamped at registration; core.clj def aliases
+;; (interleave, ...) carry no table entry yet, so they must still
+;; read as nil here.
 
 (deftest arglists-prim-present
   (is (= '([coll]) (:arglists (meta #'clojure.core/first))))
@@ -18,10 +19,27 @@
   (is (= '([s re] [s re limit]) (:arglists (meta #'clojure.string/split))))
   (is (= '([s]) (:arglists (meta #'clojure.string/upper-case)))))
 
+;; The eight special-form macro vars interned by the registry carry
+;; their JVM 1.12.4 oracle arglists (census surface) alongside
+;; :macro and :doc.
+(deftest arglists-special-forms
+  (is (= '([bindings & body]) (:arglists (meta #'clojure.core/binding))))
+  (is (= '([& names]) (:arglists (meta #'clojure.core/declare))))
+  (is (= '([name doc-string? attr-map? [params*] body]
+           [name doc-string? attr-map? ([params*] body) + attr-map?])
+         (:arglists (meta #'clojure.core/defmacro))))
+  (is (= '([& sigs]) (:arglists (meta #'clojure.core/fn))))
+  (is (= '([& body]) (:arglists (meta #'clojure.core/lazy-seq))))
+  (is (= '([bindings & body]) (:arglists (meta #'clojure.core/let))))
+  (is (= '([bindings & body]) (:arglists (meta #'clojure.core/loop))))
+  (is (= '([name docstring? attr-map? references*])
+         (:arglists (meta #'clojure.core/ns))))
+  (is (:macro (meta #'clojure.core/let)))
+  (is (:doc (meta #'clojure.core/let))))
+
 ;; Macro and def-alias names stay outside the prim table until their
 ;; own definitions carry arglists (ADR 34).
 (deftest arglists-divergent-still-absent
-  (is (nil? (:arglists (meta #'clojure.core/let))))
   (is (nil? (:arglists (meta #'clojure.core/interleave)))))
 
 ;; A dangling key-value or option tail is a value-type error, not an

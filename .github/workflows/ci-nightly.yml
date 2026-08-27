@@ -59,6 +59,19 @@ jobs:
         timeout-minutes: 60
         run: ./mino/mino task diff-test-soak
 
+      - name: JVM core differential soak (jvm-core, full corpus)
+        # Compares the full jvm-core corpus against the committed JVM
+        # ground truth (tests/adv/fixtures/jvm-core-jvm.edn, captured
+        # by `clojure -M tests/adv/jvm_core_capture.clj` on a dev
+        # host; refresh via ./mino task jvm-core-refresh). No JVM runs
+        # here -- the fixture is the oracle. Allowlist entries shrink
+        # as mino fixes land; a fresh divergence fails this lane.
+        env:
+          MINO_BIN: ${{ github.workspace }}/mino/mino
+          MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
+        timeout-minutes: 10
+        run: ./mino/mino tests/adv/runner.clj --mode soak --only jvm_core
+
       - name: Upload diff regressions on failure
         if: failure()
         uses: actions/upload-artifact@v4

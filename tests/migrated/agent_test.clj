@@ -190,7 +190,7 @@
     (try (dosync
            (send a inc)
            (throw (ex-info "boom" {})))
-         (catch e nil))
+         (catch Throwable e nil))
     (await a)
     ;; Aborted dosync's pending sends must not fire.
     (is (= 0 @a))))
@@ -215,7 +215,7 @@
   (let [a (agent 0)
         r (ref 0)]
     (add-watch r :crash (fn [_ _ _ _] (throw (ex-info "watch-crash" {}))))
-    (try (dosync (alter r inc) (send a inc)) (catch e nil))
+    (try (dosync (alter r inc) (send a inc)) (catch Throwable e nil))
     (await a)
     (is (= 1 @a))))
 

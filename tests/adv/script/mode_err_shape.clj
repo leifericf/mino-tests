@@ -17,7 +17,7 @@
 
 (defn- probe-ex-info-shape-preserved []
   (let [e  (try (eval (read-string "(throw (ex-info \"boom\" {:k :v}))"))
-                (catch e e))
+                (catch Throwable e e))
         ok (and (map? e)
                 (contains? e :mino/kind)
                 (contains? e :mino/code)
@@ -30,7 +30,7 @@
   ;; Throwing a non-map (a keyword) should still produce a classified
   ;; diagnostic envelope.
   (let [e  (try (eval (read-string "(throw :keyword-payload)"))
-                (catch e e))
+                (catch Throwable e e))
         ok (and (map? e) (contains? e :mino/kind))]
     (emit-verdict "T2.keyword-throw-classified"
                   (if ok "pass" "fail")
@@ -39,7 +39,7 @@
 
 (defn- probe-string-throw-shape []
   (let [e   (try (eval (read-string "(throw \"plain string error\")"))
-                 (catch e e))
+                 (catch Throwable e e))
         msg (when (map? e) (:mino/message e))
         ok  (and (string? msg)
                  (or (= msg "plain string error")

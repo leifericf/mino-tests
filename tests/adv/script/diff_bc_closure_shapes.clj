@@ -26,7 +26,7 @@
         (swap! results update :passed inc)
         (let [shrunk (try (shrink-divergent mino-bin lean-bin program
                                             {:budget-ms 10000})
-                          (catch e program))
+                          (catch Throwable e program))
               rfile (str "tests/adv/regressions/diff-closure-"
                          effective-seed "-" i ".clj")]
           (try
@@ -36,7 +36,7 @@
                        ";; quad: " (pr-str quad) "\n"
                        ";; witness:\n"
                        (apply str (map #(str ";; " % "\n") (s/split-lines shrunk)))))
-            (catch e nil))
+            (catch Throwable e nil))
           (swap! results update :failed inc)
           (emit-verdict "diff-closure.divergence" "fail"
                         :i i :seed effective-seed :rfile rfile)))))

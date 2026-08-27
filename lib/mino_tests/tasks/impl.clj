@@ -77,7 +77,7 @@
         cmd    (cond-> (str "MINO_PROBE_SUMMARY=" out " "
                             bin " " runner " --seed " seed " --mode " mode)
                  only (str " --only " only))]
-    (try (sh! "mkdir" "-p" "output") (catch e nil))
+    (try (sh! "mkdir" "-p" "output") (catch Throwable e nil))
     (println "  exec: sh -c" cmd)
     (try
       (println (sh! "sh" "-c" cmd))

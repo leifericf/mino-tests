@@ -22,7 +22,7 @@
   (doseq [n [1000 1024 1500 2000]]
     (let [src (nested-form n)
           e   (try (read-string src) nil
-                   (catch e e))
+                   (catch Throwable e e))
           kind (when (map? e) (:mino/kind e))]
       (emit-verdict (str "T6.reader-deep-" n)
                     (cond
@@ -38,7 +38,7 @@
         src (nested-form depth)
         e   (try (eval (read-string src))
                  nil
-                 (catch e e))
+                 (catch Throwable e e))
         kind (when (map? e) (:mino/kind e))
         ok  (or (nil? e) (some? kind))]
     (emit-verdict (str "T6.eval-nested-" depth)

@@ -10,10 +10,10 @@
 ;; agreement. Tools missing from PATH skip their lane loudly.
 
 (def ^:private date-available?
-  (try (sh "date" "-u" "+%Y") true (catch e false)))
+  (try (sh "date" "-u" "+%Y") true (catch Throwable e false)))
 
 (def ^:private python-available?
-  (try (sh "python3" "-c" "import datetime") true (catch e false)))
+  (try (sh "python3" "-c" "import datetime") true (catch Throwable e false)))
 
 (def sample-epoch-secs
   "Boundary-ish UTC seconds: epoch, negatives, leap days, century

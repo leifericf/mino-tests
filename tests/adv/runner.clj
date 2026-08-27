@@ -116,7 +116,7 @@
                  seed "\n"
                  "(load-file \"" probe-file "\")\n"))
       (println "  auto-captured regression at:" rfile)
-      (catch e nil))))
+      (catch Throwable e nil))))
 
 (defn- load-probe [path]
   (println "  loading:" path)

@@ -20,7 +20,7 @@
                       (if (>= n 200) acc
                           (recur (inc n) (cons n acc))))]
               (count v))
-            (catch e e))
+            (catch Throwable e e))
         ok (or (integer? e) (some? (try (ex-data e) (catch _ nil))))]
     (emit-verdict "T7.large-cons-chain-survives"
                   (if (integer? e) "pass"

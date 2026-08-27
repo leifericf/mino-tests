@@ -25,7 +25,7 @@
     (try
       (do (set-fail-alloc-at! 2)
           (vec (range 100)))
-      (catch e nil))
+      (catch Throwable e nil))
     ;; After the fault fires, normal allocation should work.
     (is (= [1 2 3] (vec [1 2 3])))))
 

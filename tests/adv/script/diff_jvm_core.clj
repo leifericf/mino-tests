@@ -92,7 +92,7 @@
                      (let [m (read-string %)]
                        (when (and (map? m) (contains? m :key))
                          [(:key m) m]))
-                     (catch e nil))
+                     (catch Throwable e nil))
                   lines)))))
 
 (defn- chunk-groups

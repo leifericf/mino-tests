@@ -11,10 +11,10 @@
 ;; from PATH skip their lane loudly.
 
 (def ^:private find-available?
-  (try (sh "find" "/tmp" "-maxdepth" "0") true (catch e false)))
+  (try (sh "find" "/tmp" "-maxdepth" "0") true (catch Throwable e false)))
 
 (def ^:private python-available?
-  (try (sh "python3" "-c" "import glob") true (catch e false)))
+  (try (sh "python3" "-c" "import glob") true (catch Throwable e false)))
 
 (def root "/tmp/mino-path-e2e")
 

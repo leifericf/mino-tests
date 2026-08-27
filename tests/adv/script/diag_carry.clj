@@ -10,8 +10,8 @@
 (load-file "tests/adv/invariants.clj")
 
 (defn- probe-diag-carry []
-  (let [r1 (try (read-string "(foo") nil (catch e e))
-        r2 (try (read-string "[bar") nil (catch e e))
+  (let [r1 (try (read-string "(foo") nil (catch Throwable e e))
+        r2 (try (read-string "[bar") nil (catch Throwable e e))
         r1-kind (when (map? r1) (:mino/kind r1))
         r2-kind (when (map? r2) (:mino/kind r2))
         ok (and r1-kind r2-kind)]
@@ -25,9 +25,9 @@
   ;; the runtime mustn't carry the first's diag state into the
   ;; second.
   (let [e1 (try (eval (read-string "(undefined-symbol-1)"))
-                (catch e e))
+                (catch Throwable e e))
         e2 (try (eval (read-string "(undefined-symbol-2)"))
-                (catch e e))
+                (catch Throwable e e))
         k1 (when (map? e1) (:mino/kind e1))
         k2 (when (map? e2) (:mino/kind e2))
         ok (and k1 k2)]

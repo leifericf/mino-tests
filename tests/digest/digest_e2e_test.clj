@@ -11,7 +11,7 @@
 
 (def ^:private python-available?
   (try (sh "python3" "-c" "import hashlib, hmac, zlib") true
-       (catch e false)))
+       (catch Throwable e false)))
 
 (def ^:private mask32 0xFFFFFFFF)
 

@@ -684,7 +684,7 @@
   (let [ch (chan 1)]
     (>!! ch 42)
     (is (= nil (<!! (go (try (do (<! ch) (throw "x"))
-                          (catch e nil))))))))
+                          (catch Throwable e nil))))))))
 
 (deftest go-try-multiple-parks
   (let [ch1 (chan 1) ch2 (chan 1)]

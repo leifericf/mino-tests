@@ -47,7 +47,7 @@
                                     :connect-timeout 3000
                                     :read-timeout 3000
                                     :write-timeout 3000})
-                     (catch e e))]
+                     (catch Throwable e e))]
           (is (= :tls (:mino/kind r)))
           (is (str/includes? (:mino/message r) "not trusted"))))))
 
@@ -70,7 +70,7 @@
                                      :connect-timeout 3000
                                      :read-timeout 3000
                                      :write-timeout 3000})
-                      (catch e e))]
+                      (catch Throwable e e))]
           (is (= :tls (:mino/kind r2)))
           (is (str/includes? (:mino/message r2) "not trusted")
               "the verifying request must refuse the fixture cert"))
@@ -88,7 +88,7 @@
           (is (= 200 (:status r1))))
         (let [t0 (time-ms)
               r2 (try (hr-https-get srv "/slow" {:read-timeout 400})
-                      (catch e e))
+                      (catch Throwable e e))
               dt (- (time-ms) t0)]
           (is (= :net/timeout (:mino/kind r2)))
           (is (< dt 2400)

@@ -72,7 +72,7 @@
       (if (and (seq? wrapped) (= (first wrapped) 'do))
         (vec (rest wrapped))
         [wrapped]))
-    (catch e nil)))
+    (catch Throwable e nil)))
 
 (defn split-segments
   "Split a body into [{:code [lines] :expected '...'}] segments."

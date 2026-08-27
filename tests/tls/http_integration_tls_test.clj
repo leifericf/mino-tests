@@ -35,7 +35,7 @@
   (deftest tls-default-verification-refuses-the-fixture-certificate
     (hi-with-tls-server
       (fn [tls]
-        (let [e (try (http/get (str tls "/hello")) (catch e e))]
+        (let [e (try (http/get (str tls "/hello")) (catch Throwable e e))]
           (is (= :tls (-> (ex-data e) :error :kind)))
           (is (str/includes? (-> (ex-data e) :error :message)
                              "not trusted")))))))

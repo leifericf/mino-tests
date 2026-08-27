@@ -75,7 +75,7 @@
                                                (:port srv) t-opts)
                                   "localhost"
                                   (dissoc t-opts :insecure?))
-                     (catch e e))]
+                     (catch Throwable e e))]
           (is (= :tls (:mino/kind r)))
           (is (str/includes? (:mino/message r) "certificate"))
           (is (str/includes? (:mino/message r) "not trusted"))))))
@@ -88,7 +88,7 @@
       (fn [srv]
         (let [r (try (tls-connect "localhost" (:port srv)
                                   (dissoc t-opts :insecure?))
-                     (catch e e))]
+                     (catch Throwable e e))]
           (is (= :tls (:mino/kind r)))
           (is (str/includes? (:mino/message r) "certificate"))
           (is (str/includes? (:mino/message r) "not trusted"))))))
@@ -110,7 +110,7 @@
                                                (:port srv) t-opts)
                                   "localhost"
                                   (dissoc t-opts :insecure?))
-                     (catch e e))]
+                     (catch Throwable e e))]
           ;; Default verification: the SNI name check runs even though
           ;; the chain is also untrusted, and the certificate covers
           ;; other.example, not localhost.
@@ -124,7 +124,7 @@
                                                (:port srv) t-opts)
                                   "localhost"
                                   (dissoc t-opts :insecure?))
-                     (catch e e))]
+                     (catch Throwable e e))]
           (is (= :tls (:mino/kind r)))
           (is (str/includes? (:mino/message r) "expired"))))))
 
@@ -155,7 +155,7 @@
     (fx-with-server "blob"
       (fn [srv]
         (let [s (tls-socket srv)
-              r (try (tls-read-all s 100) (catch e e))]
+              r (try (tls-read-all s 100) (catch Throwable e e))]
           (is (= :net/overflow (:mino/kind r)))
           (tls-close s)))))
 
@@ -171,7 +171,7 @@
               t0 (time-ms)
               r  (try (do (tls-write s "GET /slow HTTP/1.1\r\n\r\n")
                           (tls-read s 10))
-                      (catch e e))
+                      (catch Throwable e e))
               dt (- (time-ms) t0)]
           (is (= :net/timeout (:mino/kind r)))
           (is (< dt 2400) (str "tls read timeout fired at " dt " ms"))

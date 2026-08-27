@@ -5,8 +5,7 @@
 ;; lands, its entries are deleted and the probes must pass.
 {"apply.nonseq-tail" "fix: apply non-seqable tail"
  "def.var-roundtrip" "fix: def returns var"
- "meta.arglists-map" "fix: arglists metadata"
- "meta.arglists-defn" "fix: arglists metadata"
+ "meta.arglists-defn" "deferred: C-prim arglists"
  "lenient.distinct-set" "documented: distinct on set"
  "lenient.satisfies-garbage" "documented: satisfies lenient"
  "lenient.re-seq-string-pattern" "documented: string patterns"

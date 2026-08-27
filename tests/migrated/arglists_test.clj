@@ -49,10 +49,16 @@
   (is (not= "MAR001"
             (try (clojure.core/agent :f :error-mode)
                  (catch Throwable e (get e :mino/code)))))
-  (is (thrown? (clojure.core/assoc {} :a)))
+  ;; assoc is the JVM outlier: arity 2 is below the smallest oracle
+  ;; signature and stays an arity error (ADR 34 gate), while the
+  ;; odd-tail parity rejection alone is a value error.
+  (is (thrown? (clojure.core/assoc {} :a :b :c)))
   (is (not= "MAR001"
-            (try (clojure.core/assoc {} :a)
+            (try (clojure.core/assoc {} :a :b :c)
                  (catch Throwable e (get e :mino/code)))))
+  (is (= "MAR001"
+         (try (clojure.core/assoc {} :a)
+              (catch Throwable e (get e :mino/code)))))
   (is (thrown? (clojure.core/restart-agent :ag :state :dispatch)))
   (is (not= "MAR001"
             (try (clojure.core/restart-agent :ag :state :dispatch)

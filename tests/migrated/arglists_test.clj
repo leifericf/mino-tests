@@ -2,9 +2,7 @@
 
 ;; :arglists metadata on C-primitive vars, installed at startup from
 ;; the generated table (ADR 34). Special-form macros carry the census
-;; oracle shapes stamped at registration; core.clj def aliases
-;; (interleave, ...) carry no table entry yet, so they must still
-;; read as nil here.
+;; oracle shapes stamped at registration.
 
 (deftest arglists-prim-present
   (is (= '([coll]) (:arglists (meta #'clojure.core/first))))
@@ -37,10 +35,24 @@
   (is (:macro (meta #'clojure.core/let)))
   (is (:doc (meta #'clojure.core/let))))
 
-;; Macro and def-alias names stay outside the prim table until their
-;; own definitions carry arglists (ADR 34).
-(deftest arglists-divergent-still-absent
-  (is (nil? (:arglists (meta #'clojure.core/interleave)))))
+;; The four core.clj def aliases carry :arglists, all oracle-exact:
+;; each impl accepts every census-oracle arity (probed at arities
+;; 0..9; accepted arities fail only on value shape, never with an
+;; arity code). array-map aliases hash-map, whose odd-count rejection
+;; is a value error, so the variadic oracle shape is honest.
+(deftest arglists-def-aliases
+  (is (= '([] [c1] [c1 c2] [c1 c2 & colls])
+         (:arglists (meta #'clojure.core/interleave))))
+  (is (= '([n coll] [n step coll] [n step pad coll])
+         (:arglists (meta #'clojure.core/partition))))
+  (is (= '([] [& keyvals])
+         (:arglists (meta #'clojure.core/array-map))))
+  (is (= '([m ks] [m ks not-found])
+         (:arglists (meta #'clojure.core/get-in))))
+  (is (= '(1 :a 2 :b) (interleave [1 2] [:a :b])))
+  (is (= '((1 2) (3 4)) (partition 2 [1 2 3 4 5])))
+  (is (= {:a 1} (array-map :a 1)))
+  (is (= 2 (get-in {:a {:b 2}} [:a :b]))))
 
 ;; A dangling key-value or option tail is a value-type error, not an
 ;; arity error: the call must throw, the error code must not be the

@@ -1,4 +1,5 @@
 (require "tests/test")
+(require '[clojure.repl :refer [doc doc-string]])
 
 ;; :arglists metadata on C-primitive vars, installed at startup from
 ;; the generated table (ADR 34). Special-form macros carry the census
@@ -163,5 +164,34 @@
   ;; two-element signature may appear.
   (is (not-any? #(= 2 (count %))
                 (:arglists (meta #'clojure.core/slurp)))))
+
+;; doc renders the JVM signature shape: name line, arglists line,
+;; docstring, for every var whose meta carries :arglists, whether the
+;; arglists came from the prim table, the special-form registry, or a
+;; defn. Vars without :arglists keep their bare docstrings.
+(deftest doc-signatures
+  (is (= "first\n([coll])\nReturns the first item in a collection, or nil if empty."
+         (doc-string 'first)))
+  (let [s (with-out-str (doc first))]
+    (is (clojure.string/starts-with? s "first\n"))
+    (is (clojure.string/includes? s "\n([coll])\n")))
+  (is (clojure.string/includes? (with-out-str (doc +))
+                                "\n([] [x] [x y] [x y & more])\n"))
+  (is (clojure.string/includes? (with-out-str (doc let))
+                                "\n([bindings & body])\n"))
+  ;; map's arglists come from its core.clj defn form, whose signature
+  ;; is ([f] [f & colls]), not the census oracle's five-arity shape.
+  (is (clojure.string/includes? (with-out-str (doc map))
+                                "\n([f] [f & colls])\n"))
+  (is (clojure.string/starts-with?
+       (doc-string 'clojure.string/join)
+       "join\n([coll] [separator coll])\n"))
+  ;; A mino-only prim with no :arglists keeps its bare docstring: no
+  ;; line of the output opens an arglists form.
+  (let [s (doc-string 'mino-capability)]
+    (is (clojure.string/starts-with?
+         s "Return the install-group capability label"))
+    (is (not-any? #(clojure.string/starts-with? % "(")
+                  (clojure.string/split-lines s)))))
 
 (run-tests-and-exit)

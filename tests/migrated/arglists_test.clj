@@ -151,13 +151,13 @@
 (deftest arglists-defn-baseline
   (is (:arglists (meta #'clojure.core/map))))
 
-;; Lax prims accept every oracle arity plus tolerated extras, so the
-;; oracle arglists attach verbatim; the extra arities stay unclaimed.
-;; Real gaps reject oracle-claimed arities, so their arglists record
-;; the arity set the prim actually accepts (mino-true shapes derived
-;; from the prim sources, oracle param names kept where the shape
-;; coincides). spit supports its option tail (:append, :encoding) and
-;; rides the oracle shape with the lax class.
+;; The former lax prims were tightened on 2026-08-28 to reject every
+;; undeclared arity, so the oracle arglists attach verbatim and every
+;; claimed arity is honest. Real gaps reject oracle-claimed arities, so
+;; their arglists record the arity set the prim actually accepts
+;; (mino-true shapes derived from the prim sources, oracle param names
+;; kept where the shape coincides). spit supports its option tail
+;; (:append, :encoding) and rides the oracle shape.
 (deftest arglists-lax-and-gap
   (is (= '([x] [x y] [x y & more]) (:arglists (meta #'clojure.core/=))))
   (is (= '([x y]) (:arglists (meta #'clojure.core/identical?))))

@@ -4,8 +4,8 @@
 
 ;; The permanent arity-conformance gate over :arglists metadata (ADR
 ;; 34, decision 6). Arglists can never claim an arity the callee
-;; rejects, and every undeclared arity 0..9 must stay rejected except
-;; the documented lax set. The probe calls each var with sentinel
+;; rejects, and every undeclared arity 0..9 must stay rejected. The
+;; probe calls each var with sentinel
 ;; keywords and reads the structured error: a callee-side arity
 ;; rejection is the :eval/arity kind, which covers both the prim code
 ;; MAR001 and the compiled-fn code MAR002 (the pair is pinned by
@@ -83,40 +83,13 @@
 (def skip-vars #{"clojure.core/spit" "clojure.core/shutdown-agents"
                  "clojure.walk/postwalk-demo" "clojure.walk/prewalk-demo"})
 
-;; Mirrored from lax-prims in tools/gen_arglists.clj in the mino repo
-;; (the 2026-08-27 sweep): mino accepts every oracle arity plus
-;; tolerated extras, so the extra arities stay unclaimed by design.
-;; spit rides this class in the generator and the skip set here
-;; removes it before the lax set is consulted. interleave needs no
-;; entry: its defn claims every arity 0..9 through its variadic tail,
-;; so no arity 0..9 is undeclared for it.
-(def lax-vars
-  #{"clojure.core/<"
-    "clojure.core/<="
-    "clojure.core/="
-    "clojure.core/>"
-    "clojure.core/>="
-    "clojure.core/all-ns"
-    "clojure.core/bit-and"
-    "clojure.core/bit-or"
-    "clojure.core/bit-xor"
-    "clojure.core/byte-array"
-    "clojure.core/conj!"
-    "clojure.core/distinct?"
-    "clojure.core/get-thread-bindings"
-    "clojure.core/identical?"
-    "clojure.core/loaded-libs"
-    "clojure.core/object-array"
-    "clojure.core/realized?"
-    "clojure.core/ref-history-count"
-    "clojure.core/ref-max-history"
-    "clojure.core/ref-min-history"
-    "clojure.core/release-pending-sends"
-    "clojure.core/send-via"
-    "clojure.core/spit"
-    "clojure.core/symbol"
-    "clojure.core/to-array"
-    "clojure.core/with-meta"})
+;; Mirrored the lax-prims set in tools/gen_arglists.clj in the mino
+;; repo until 2026-08-28, when the lax prims were tightened to reject
+;; their undeclared arities; the set is gone and the gate now enforces
+;; undeclared rejection for every probe-eligible var. spit stays in
+;; the skip set above (it writes files; its option tail is genuine).
+;; interleave needs no entry: its defn claims every arity 0..9 through
+;; its variadic tail, so no arity 0..9 is undeclared for it.
 
 (def gate-nss '[clojure.core clojure.string clojure.repl
                 clojure.walk clojure.datafy clojure.core.protocols])
@@ -157,14 +130,12 @@
     @acc))
 
 (defn undeclared-violations-in
-  "Every target that accepts an arity 0..9 its arglists do not
-  claim, lax vars excepted."
+  "Every target that accepts an arity 0..9 its arglists do not claim."
   [targets]
   (let [acc (atom [])]
     (doseq [target targets]
       (let [id (nth target 0) v (nth target 1) m (meta v)]
         (when-not (or (skip-vars id)
-                      (lax-vars id)
                       (:macro m))
           (let [claimed (claimed-arities (:arglists m))]
             (doseq [k (range 0 (inc arity-probe-max))]
@@ -210,6 +181,85 @@
           (str ns-sym ": callee accepts undeclared arities "
                "(var, arity): " (pr-str vs))))))
 
+;; The 2026-08-28 tightening of the former lax set. Each row names a
+;; var, the arities its oracle arglists leave undeclared, and the
+;; arity-code the rejection must carry: every prim rejects with
+;; MAR001, while realized? is a core.clj defn override and rejects
+;; with the compiled-fn code MAR002. The re-derivation at this tip
+;; found two drifts against the 2026-08-27 sweep: realized? was
+;; already tight through the override, and ref-history-count also
+;; tolerated arity 2.
+(def lax-tightened-rows
+  [ ['clojure.core/with-meta            (range 3 10)      "MAR001"]
+    ['clojure.core/symbol               (range 3 10)      "MAR001"]
+    ['clojure.core/identical?           (range 3 10)      "MAR001"]
+    ['clojure.core/to-array             [2]               "MAR001"]
+    ['clojure.core/object-array         [2]               "MAR001"]
+    ['clojure.core/byte-array           (range 3 10)      "MAR001"]
+    ['clojure.core/conj!                (range 3 10)      "MAR001"]
+    ['clojure.core/realized?            [0 2]             "MAR002"]
+    ['clojure.core/distinct?            [0]               "MAR001"]
+    ['clojure.core/=                    [0]               "MAR001"]
+    ['clojure.core/<                    [0]               "MAR001"]
+    ['clojure.core/>                    [0]               "MAR001"]
+    ['clojure.core/<=                   [0]               "MAR001"]
+    ['clojure.core/>=                   [0]               "MAR001"]
+    ['clojure.core/bit-and              [1]               "MAR001"]
+    ['clojure.core/bit-or               [1]               "MAR001"]
+    ['clojure.core/bit-xor              [1]               "MAR001"]
+    ['clojure.core/ref-min-history      (range 3 10)      "MAR001"]
+    ['clojure.core/ref-max-history      (range 3 10)      "MAR001"]
+    ['clojure.core/ref-history-count     (range 2 10)      "MAR001"]
+    ['clojure.core/all-ns               (range 1 10)      "MAR001"]
+    ['clojure.core/loaded-libs          (range 1 10)      "MAR001"]
+    ['clojure.core/get-thread-bindings  (range 1 10)      "MAR001"]
+    ['clojure.core/release-pending-sends (range 1 10)     "MAR001"]
+    ['clojure.core/send-via             [0 1 2]           "MAR001"] ])
+
+(defn probe-arity-result
+  "Call v with k sentinel args; :accepted when the call returns, the
+  [kind code] pair of the error otherwise."
+  [v k]
+  (try (apply @v (repeat k :lax-tightened-sentinel))
+       :accepted
+       (catch Throwable e [(:mino/kind e) (:mino/code e)])))
+
+(deftest lax-arities-tightened
+  (doseq [[id ks code] lax-tightened-rows]
+    (doseq [k ks]
+      (is (= [:eval/arity code] (probe-arity-result (resolve id) k))
+          (str id " must reject arity " k))))
+  ;; One declared arity per var still behaves; send-via's declared
+  ;; arity carries its documented deferred-prim state code.
+  (is (= 1 (:a (meta (with-meta [] {:a 1})))))
+  (is (= 'x/y (symbol "x" "y")))
+  (let [v (vector)] (is (identical? v v)))
+  (is (= 2 (alength (to-array [1 2]))))
+  (is (= 3 (alength (object-array 3))))
+  (is (= [1 2] (seq (byte-array [1 2]))))
+  (is (= [] (persistent! (conj!))))
+  (is (= [1 2] (persistent! (conj! (transient [1]) 2))))
+  (let [d (delay 1)] (deref d) (is (true? (realized? d))))
+  (is (true? (distinct? 1 2 3)))
+  (is (true? (= 1 1 1)))
+  (is (true? (< 1 2 3)))
+  (is (true? (<= 1 1 2)))
+  (is (true? (> 3 2 1)))
+  (is (true? (>= 2 1 1)))
+  (is (= 8 (bit-and 12 10)))
+  (is (= 14 (bit-or 12 10)))
+  (is (= 6 (bit-xor 12 10)))
+  (is (= 0 (ref-min-history (ref 0))))
+  (is (= 10 (ref-max-history (ref 0))))
+  (is (= 0 (ref-history-count (ref 0))))
+  (is (contains? (set (map ns-name (all-ns))) 'clojure.core))
+  (is (contains? (set (loaded-libs)) 'clojure/string))
+  (is (map? (binding [*print-length* 3] (get-thread-bindings))))
+  (is (zero? (release-pending-sends)))
+  (is (= "MST008"
+         (try (send-via :fifo inc inc)
+              (catch Throwable e (:mino/code e))))))
+
 ;; A deterministic spread sample instead of a random fuzz: all
 ;; probe-eligible pairs ordered by a char-sum hash of their key, first
 ;; 200 probed with the same two-sided invariant. A red run points at
@@ -247,16 +297,15 @@
         (let [id (nth p 0) v (nth p 1) k (nth p 2)
               claimed (contains? (claimed-arities (:arglists (meta v))) k)]
           (swap! fuzz-probes inc)
-          (cond (and claimed
-                     (not (arity-accepted? v k)))
-                (swap! acc conj
-                       {:var id :arity k :direction :declared-rejected})
+           (cond (and claimed
+                      (not (arity-accepted? v k)))
+                 (swap! acc conj
+                        {:var id :arity k :direction :declared-rejected})
 
-                (and (not claimed)
-                     (not (lax-vars id))
-                     (arity-accepted? v k))
-                (swap! acc conj
-                       {:var id :arity k :direction :undeclared-accepted})
+                 (and (not claimed)
+                      (arity-accepted? v k))
+                 (swap! acc conj
+                        {:var id :arity k :direction :undeclared-accepted})
 
                 :else nil)))
       @acc)))

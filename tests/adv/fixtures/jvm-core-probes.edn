@@ -112,5 +112,15 @@
  {:key "sweep.empty-conj" :form "(conj)"}
  {:key "sweep.mapcat-1" :form "(fn? (mapcat [1 2]))"}
  {:key "sweep.partial-1" :form "((partial + 1) 2)"}
- {:key "sweep.comp-0" :form "((comp) 5)"}
- {:key "sweep.repeat-2" :form "(vec (repeat 3 7))"}]
+  {:key "sweep.comp-0" :form "((comp) 5)"}
+  {:key "sweep.repeat-2" :form "(vec (repeat 3 7))"}
+
+  ;; arglists: full signatures byte-for-byte (prim, variadic prim,
+  ;; clojure.string, macro, rest-arg prim). mino-true slurp is the
+  ;; documented divergence: the opts arity stays unimplemented.
+  {:key "arglists.prim" :form "(pr-str (:arglists (meta #'clojure.core/first)))"}
+  {:key "arglists.prim-variadic" :form "(pr-str (:arglists (meta #'clojure.core/+)))"}
+  {:key "arglists.string" :form "(pr-str (:arglists (meta #'clojure.string/join)))"}
+  {:key "arglists.macro" :form "(pr-str (:arglists (meta #'clojure.core/let)))"}
+  {:key "arglists.class-a" :form "(pr-str (:arglists (meta #'clojure.core/hash-map)))"}
+  {:key "arglists.mino-true" :form "(pr-str (:arglists (meta #'clojure.core/slurp)))"}]

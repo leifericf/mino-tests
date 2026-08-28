@@ -50,6 +50,9 @@
          (:arglists (meta #'clojure.core/array-map))))
   (is (= '([m ks] [m ks not-found])
          (:arglists (meta #'clojure.core/get-in))))
+  ;; Regression: the core.clj override is a defn so its def-with-docstring
+  ;; cannot drop the attached :arglists (a def replaces var meta wholesale).
+  (is (= '([x]) (:arglists (meta #'clojure.core/realized?))))
   (is (= '(1 :a 2 :b) (interleave [1 2] [:a :b])))
   (is (= '((1 2) (3 4)) (partition 2 [1 2 3 4 5])))
   (is (= {:a 1} (array-map :a 1)))

@@ -1,5 +1,6 @@
 (require "tests/test")
 (require '[clojure.repl :refer [doc]])
+(require '[clojure.walk] '[clojure.datafy] '[clojure.core.protocols])
 
 ;; The permanent arity-conformance gate over :arglists metadata (ADR
 ;; 34, decision 6). Arglists can never claim an arity the callee
@@ -70,15 +71,17 @@
                      [(:min shape)])))
                arglists)))
 
-;; Probing is withheld from the two prims whose application mutates
+;; Probing is withheld from the prims whose application mutates
 ;; process-global state: spit writes files, and shutdown-agents
 ;; quiesces the agent pool the surrounding suite still needs (a
 ;; load-time probe kills every later agent-based test with MST008).
-;; Neither var has an arity divergence to hide: both accept their
-;; declared arities and claim no others. Macros are not apply-probed
-;; either; the apply contract differs for them, so only their
-;; arglists presence is checked.
-(def skip-vars #{"clojure.core/spit" "clojure.core/shutdown-agents"})
+;; The walk demo fns join them: probing prints a Walked: line per
+;; visited sentinel form to *out*, polluting the suite log (both are
+;; fixed 2-arity defns; neither has an arity divergence to hide).
+;; Macros are not apply-probed either; the apply contract differs for
+;; them, so only their arglists presence is checked.
+(def skip-vars #{"clojure.core/spit" "clojure.core/shutdown-agents"
+                 "clojure.walk/postwalk-demo" "clojure.walk/prewalk-demo"})
 
 ;; Mirrored from lax-prims in tools/gen_arglists.clj in the mino repo
 ;; (the 2026-08-27 sweep): mino accepts every oracle arity plus
@@ -115,7 +118,8 @@
     "clojure.core/to-array"
     "clojure.core/with-meta"})
 
-(def gate-nss '[clojure.core clojure.string clojure.repl])
+(def gate-nss '[clojure.core clojure.string clojure.repl
+                clojure.walk clojure.datafy clojure.core.protocols])
 
 (defn gate-targets
   "[id var] pairs for every public of ns-sym whose meta carries
@@ -179,14 +183,18 @@
 ;; The sweeps. Each is a deterministic function of the loaded image.
 
 (def declared-sweep
-  {"clojure.core"  (vec (sort-by violation-key (declared-violations 'clojure.core)))
-   "clojure.string" (vec (sort-by violation-key (declared-violations 'clojure.string)))
-   "clojure.repl"  (vec (sort-by violation-key (declared-violations 'clojure.repl)))})
+  (into {}
+        (map (fn [ns-sym]
+               [(str ns-sym)
+                (vec (sort-by violation-key (declared-violations ns-sym)))]))
+        gate-nss))
 
 (def undeclared-sweep
-  {"clojure.core"  (vec (sort-by violation-key (undeclared-violations 'clojure.core)))
-   "clojure.string" (vec (sort-by violation-key (undeclared-violations 'clojure.string)))
-   "clojure.repl"  (vec (sort-by violation-key (undeclared-violations 'clojure.repl)))})
+  (into {}
+        (map (fn [ns-sym]
+               [(str ns-sym)
+                (vec (sort-by violation-key (undeclared-violations ns-sym)))]))
+        gate-nss))
 
 (deftest gate-declared-arities-accepted
   (doseq [ns-sym gate-nss]

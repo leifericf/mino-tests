@@ -1,5 +1,6 @@
 (require "tests/test")
 (require '[clojure.repl :refer [doc doc-string]])
+(require '[clojure.walk] '[clojure.datafy] '[clojure.core.protocols])
 
 ;; :arglists metadata on C-primitive vars, installed at startup from
 ;; the generated table (ADR 34). Special-form macros carry the census
@@ -172,6 +173,39 @@
   ;; two-element signature may appear.
   (is (not-any? #(= 2 (count %))
                 (:arglists (meta #'clojure.core/slurp)))))
+
+;; The lib def-alias re-exports beyond the prim namespaces carry
+;; their census-oracle arglists on def metadata (the array-map
+;; precedent): clojure.walk and clojure.datafy verbatim, and
+;; clojure.core.protocols verbatim except coll-reduce, whose
+;; defprotocol dispatch fn rejects the oracle 2-arity and records the
+;; mino-true single shape instead. The alias roots stay identical to
+;; the clojure.core twins.
+(deftest arglists-lib-aliases
+  (is (= '([inner outer form])
+         (:arglists (meta #'clojure.walk/walk))))
+  (is (= '([f form])
+         (:arglists (meta #'clojure.walk/postwalk))))
+  (is (= '([smap form])
+         (:arglists (meta #'clojure.walk/postwalk-replace))))
+  (is (= '([amap f init])
+         (:arglists (meta #'clojure.core.protocols/kv-reduce))))
+  (is (= '([o])
+         (:arglists (meta #'clojure.core.protocols/datafy))))
+  (is (= '([coll k v])
+         (:arglists (meta #'clojure.core.protocols/nav))))
+  (is (= '([x])
+         (:arglists (meta #'clojure.datafy/datafy))))
+  (is (= '([coll k v])
+         (:arglists (meta #'clojure.datafy/nav))))
+  ;; Honesty: the oracle's 2-arity stays unclaimed on coll-reduce, so
+  ;; no two-parameter signature may appear.
+  (is (= '([coll f init])
+         (:arglists (meta #'clojure.core.protocols/coll-reduce))))
+  (is (not-any? #(= 2 (count %))
+                (:arglists (meta #'clojure.core.protocols/coll-reduce))))
+  (is (identical? @#'clojure.walk/walk @#'clojure.core/walk))
+  (is (identical? @#'clojure.datafy/datafy @#'clojure.core.protocols/datafy)))
 
 ;; doc renders the JVM signature shape: name line, arglists line,
 ;; docstring, for every var whose meta carries :arglists, whether the

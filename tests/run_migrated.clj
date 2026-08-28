@@ -62,6 +62,7 @@
 
 ;; --- C-prim :arglists metadata (ADR 34) ---
 (require-with-progress "tests/migrated/arglists_test")
+(require-with-progress "tests/migrated/arglists_conformance_test")
 
 (reset! clojure.test/suite-mode false)
 

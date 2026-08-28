@@ -4,7 +4,7 @@
 ;; The permanent arity-conformance gate over :arglists metadata (ADR
 ;; 34, decision 6). Arglists can never claim an arity the callee
 ;; rejects, and every undeclared arity 0..9 must stay rejected except
-;; the documented lax set and the ticketed defect allowlist below. The probe calls each var with sentinel
+;; the documented lax set. The probe calls each var with sentinel
 ;; keywords and reads the structured error: a callee-side arity
 ;; rejection is the :eval/arity kind, which covers both the prim code
 ;; MAR001 and the compiled-fn code MAR002 (the pair is pinned by
@@ -117,93 +117,6 @@
 
 (def gate-nss '[clojure.core clojure.string clojure.repl])
 
-;; ------------------------------------------------------------------
-;; Defect-ticket allowlist: visible debt, not silent skips.
-;;
-;; The vars below carry PRE-EXISTING runtime defects in image-compiled
-;; single-arity and variadic defns, discovered by this gate on
-;; 2026-08-27 and filed as forward tasks against the runtime. None of
-;; them is an arglists lie: each one's arglists match the oracle (or
-;; its own defn shape), so the declared direction stays fully
-;; enforced for every var listed here.
-;;
-;; Two defect classes:
-;; - MSY001 misclassification (15 vars): on a wrong argument count
-;;   the defn throws error code MSY001 instead of the arity kind, so
-;;   the kind-based classifier reads the rejection as acceptance and
-;;   the var shows up as undeclared-accepted. Exempted check per var:
-;;   :undeclared-accepted.
-;; - Unenforced variadic minimums (6 vars): the defn lets
-;;   sub-minimum argument counts through instead of rejecting them.
-;;   Minimum enforcement is what both gate directions lean on; the
-;;   declared side never trips on it, and every arity below the
-;;   declared minimum reads as accepted on the undeclared side.
-;;   Exempted check per var: :undeclared-accepted (the below-minimum
-;;   arities).
-;;
-;; image-defn-defect-exemptions marks, per var, exactly which check
-;; is exempted until the ticket lands; nothing else is relaxed. The
-;; exemption is per (var, direction), never blanket: a var comes off
-;; this set the moment its defect is fixed, and dropping a live entry
-;; turns the gate red again for precisely that var.
-;; ------------------------------------------------------------------
-(def ^:private image-defn-defects
-  #{"clojure.core/abs"
-    "clojure.core/cycle"
-    "clojure.core/ex-cause"
-    "clojure.core/extend"
-    "clojure.core/iteration"
-    "clojure.core/nthnext"
-    "clojure.core/num"
-    "clojure.core/parse-boolean"
-    "clojure.core/protocol-dispatch"
-    "clojure.core/rand-nth"
-    "clojure.core/re-seq"
-    "clojure.core/reader-conditional?"
-    "clojure.core/seq-to-map-for-destructuring"
-    "clojure.core/tagged-literal?"
-    "clojure.core/trampoline"
-    "clojure.core/update"
-    "clojure.core/update-in"
-    "clojure.core/vec"
-    "clojure.core/walk"
-    "clojure.string/replace"
-    "clojure.string/split-lines"})
-
-(def ^:private image-defn-defect-exemptions
-  ;; 15 MSY001-misclassified single-arity defns: wrong error code on
-  ;; wrong arg counts, so undeclared rejections read as accepted.
-  {"clojure.core/abs"                        #{:undeclared-accepted}
-   "clojure.core/cycle"                      #{:undeclared-accepted}
-   "clojure.core/ex-cause"                   #{:undeclared-accepted}
-   "clojure.core/nthnext"                    #{:undeclared-accepted}
-   "clojure.core/num"                        #{:undeclared-accepted}
-   "clojure.core/parse-boolean"              #{:undeclared-accepted}
-   "clojure.core/rand-nth"                   #{:undeclared-accepted}
-   "clojure.core/re-seq"                     #{:undeclared-accepted}
-   "clojure.core/reader-conditional?"        #{:undeclared-accepted}
-   "clojure.core/seq-to-map-for-destructuring" #{:undeclared-accepted}
-   "clojure.core/tagged-literal?"            #{:undeclared-accepted}
-   "clojure.core/vec"                        #{:undeclared-accepted}
-   "clojure.core/walk"                       #{:undeclared-accepted}
-   "clojure.string/replace"                  #{:undeclared-accepted}
-   "clojure.string/split-lines"              #{:undeclared-accepted}
-   ;; 6 variadic defns with unenforced minimums: sub-minimum counts
-   ;; are not rejected, so the below-minimum arities read as accepted.
-   "clojure.core/extend"                     #{:undeclared-accepted}
-   "clojure.core/iteration"                  #{:undeclared-accepted}
-   "clojure.core/protocol-dispatch"          #{:undeclared-accepted}
-   "clojure.core/trampoline"                 #{:undeclared-accepted}
-   "clojure.core/update"                     #{:undeclared-accepted}
-   "clojure.core/update-in"                  #{:undeclared-accepted}})
-
-(defn exempt?
-  "True when the defect ticket for id exempts this one direction of
-  the gate for that var."
-  [id direction]
-  (and (contains? image-defn-defects id)
-       (contains? (get image-defn-defect-exemptions id) direction)))
-
 (defn gate-targets
   "[id var] pairs for every public of ns-sym whose meta carries
   :arglists."
@@ -231,13 +144,12 @@
               (when-not (seq (:arglists m))
                 (swap! acc conj {:var id :direction :macro-arglists-empty}))
 
-              :else
-              (when-not (exempt? id :declared-rejected)
-                (doseq [k (sort (declared-min-arities (:arglists m)))]
-                  (when-not (arity-accepted? v k)
-                    (swap! acc conj
-                           {:var id :arity k
-                            :direction :declared-rejected})))))))
+               :else
+               (doseq [k (sort (declared-min-arities (:arglists m)))]
+                 (when-not (arity-accepted? v k)
+                   (swap! acc conj
+                          {:var id :arity k
+                           :direction :declared-rejected}))))))
     @acc))
 
 (defn undeclared-violations-in
@@ -249,7 +161,6 @@
       (let [id (nth target 0) v (nth target 1) m (meta v)]
         (when-not (or (skip-vars id)
                       (lax-vars id)
-                      (exempt? id :undeclared-accepted)
                       (:macro m))
           (let [claimed (claimed-arities (:arglists m))]
             (doseq [k (range 0 (inc arity-probe-max))]
@@ -329,14 +240,12 @@
               claimed (contains? (claimed-arities (:arglists (meta v))) k)]
           (swap! fuzz-probes inc)
           (cond (and claimed
-                     (not (exempt? id :declared-rejected))
                      (not (arity-accepted? v k)))
                 (swap! acc conj
                        {:var id :arity k :direction :declared-rejected})
 
                 (and (not claimed)
                      (not (lax-vars id))
-                     (not (exempt? id :undeclared-accepted))
                      (arity-accepted? v k))
                 (swap! acc conj
                        {:var id :arity k :direction :undeclared-accepted})

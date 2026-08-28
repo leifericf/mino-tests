@@ -64,6 +64,9 @@
 (require-with-progress "tests/migrated/arglists_test")
 (require-with-progress "tests/migrated/arglists_conformance_test")
 
+;; --- defn arity diagnostics on the tree-walk tier ---
+(require-with-progress "tests/migrated/arity_image_conformance_test")
+
 (reset! clojure.test/suite-mode false)
 
 (log-progress "suite" "starting run-tests-and-exit")

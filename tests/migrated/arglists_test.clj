@@ -108,6 +108,11 @@
             (try (clojure.core/ref :s :max-history)
                  (catch Throwable e (get e :mino/code)))))
   (is (ref? (clojure.core/ref :s :max-history 10)))
+  ;; spit's dangling option tail is a value error naming the key
+  (is (thrown? (clojure.core/spit "/tmp/mino-spit-tail-pin" "x" :append)))
+  (is (not= "MAR001"
+            (try (clojure.core/spit "/tmp/mino-spit-tail-pin" "x" :append)
+                 (catch Throwable e (get e :mino/code)))))
   (is (= '([] [& keyvals]) (:arglists (meta #'clojure.core/hash-map))))
   (is (= '([& keyvals]) (:arglists (meta #'clojure.core/sorted-map))))
   (is (= '([comparator & keyvals])

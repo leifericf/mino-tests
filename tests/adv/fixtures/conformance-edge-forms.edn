@@ -1,0 +1,105 @@
+;; Authored source of truth for the conformance edge corpus.
+;; Entries: {:var .. :form ..} hand-reasoned edge cases, or
+;; {:var .. :apply-palette N} for mechanical palette expansion.
+;; :pending-bug marks a known open divergence (skip + count).
+;; Rebuild tuples: bb tests/adv/conformance_edge_capture.clj
+{:forms
+ [
+   {:var "rationalize", :form "(rationalize 0.1)"}
+   {:var "rationalize", :form "(rationalize 1.5)"}
+   {:var "rationalize", :form "(rationalize -0.75)"}
+   {:var "rationalize", :form "(rationalize 0.0)", :pending-bug "bigint result prints without N suffix (mino/.local/BUGS.md: bigint N normalization)"}
+   {:var "rationalize", :form "(rationalize -0.0)", :pending-bug "bigint result prints without N suffix (mino/.local/BUGS.md: bigint N normalization)"}
+   {:var "rationalize", :form "(rationalize 2)"}
+   {:var "rationalize", :form "(rationalize 1/3)"}
+   {:var "rationalize", :form "(rationalize 0.1M)"}
+   {:var "rationalize", :form "(rationalize 1.0M)", :pending-bug "bigint result prints without N suffix (mino/.local/BUGS.md: bigint N normalization)"}
+   {:var "rationalize", :form "(rationalize 100.0)"}
+   {:var "rationalize", :form "(rationalize 1e-5)"}
+   {:var "rationalize", :form "(rationalize 1e300)"}
+   {:var "rationalize", :form "(rationalize 4.9E-324)", :pending-bug "double shortest-print diverges at subnormal extreme (mino/.local/BUGS.md: double shortest-print)"}
+   {:var "rationalize", :form "(rationalize 10N)"}
+   {:var "rationalize", :form "(+ (rationalize 0.1) (rationalize 0.2))"}
+   {:var "rationalize", :form "(= 1/10 (rationalize 0.1))"}
+   {:var "rationalize", :form "(ratio? (rationalize 0.1))"}
+   {:var "rationalize", :form "(integer? (rationalize 2.0))"}
+   {:var "rationalize", :form "(rationalize 0.3333333333333333)"}
+   {:var "rationalize", :form "(* (rationalize 0.5) 2)", :pending-bug "bigint result prints without N suffix (mino/.local/BUGS.md: bigint N normalization)"}
+   {:var "max-key", :form "(max-key count \"a\" \"bb\" \"cc\")"}
+   {:var "max-key", :form "(max-key count \"asdf\")"}
+   {:var "max-key", :form "(max-key nil \"only\")"}
+   {:var "max-key", :form "(max-key - 1 2 3)"}
+   {:var "max-key", :form "(max-key #(mod % 5) 7 12 9)"}
+   {:var "max-key", :form "(max-key first [1 2] [1 3])"}
+   {:var "max-key", :form "(apply max-key val {:a 1 :b 2 :c 2})"}
+   {:var "max-key", :form "(max-key count [] [] [])"}
+   {:var "max-key", :form "(max-key abs -5 3)"}
+   {:var "max-key", :form "(let [calls (atom 0)] [(max-key (fn [x] (swap! calls inc) x) 1 2 3 4) @calls])"}
+   {:var "max-key", :form "(max-key #(if (even? %) 1 0) 1 3 2 4 5)"}
+   {:var "max-key", :form "(max-key second [:a 1] [:b 2] [:c 2] [:d 0])"}
+   {:var "max-key", :form "(max-key val (first {:a 1}))"}
+   {:var "max-key", :form "(max-key count \"a\" \"bb\" \"cc\" \"d\" \"ee\")"}
+   {:var "reductions", :form "(reductions + [1 2 3 4])"}
+   {:var "reductions", :form "(reductions + [])"}
+   {:var "reductions", :form "(reductions + 100 [])"}
+   {:var "reductions", :form "(reductions conj [] [1 2 3])"}
+   {:var "reductions", :form "(take 5 (reductions + (range)))"}
+   {:var "reductions", :form "(reductions (fn [acc x] (if (= x 3) (reduced acc) (+ acc x))) 0 [1 2 3 4 5])", :pending-bug "reductions ignores reduced, errors out (mino/.local/BUGS.md: reduced in reductions)"}
+   {:var "reductions", :form "(reductions + 0 nil)"}
+   {:var "reductions", :form "(first (reductions (fn [_ _] (throw (ex-info \"boom\" {}))) 42 [1 2 3]))"}
+   {:var "reductions", :form "(reductions * 1 [1 2 3 4 5])"}
+   {:var "reductions", :form "(count (reductions + (range 100)))"}
+   {:var "reductions", :form "(reductions - [10 1 2 3])"}
+   {:var "reductions", :form "(reductions str \"\" [\"a\" \"b\"])"}
+   {:var "reductions", :form "(reductions (constantly :x) [1 2 3])"}
+   {:var "reductions", :form "(reductions + 1/2 [1/3 1/6])", :pending-bug "bigint result prints without N suffix (mino/.local/BUGS.md: bigint N normalization)"}
+   {:var "reductions", :form "(let [seen (atom [])] [(first (reductions (fn [a b] (swap! seen conj b) (+ a b)) (range 10))) (count @seen)])"}
+   {:var "reductions", :form "(last (reductions + (range 1000)))"}
+   {:var "reductions", :form "(reductions (fn [a b] (reduced (+ a b))) [1 2 3])", :pending-bug "reductions ignores reduced, errors out (mino/.local/BUGS.md: reduced in reductions)"}
+   {:var "reductions", :form "(nth (reductions + (range)) 10)"}
+   {:var "partitionv", :form "(partitionv 2 [1 2 3 4 5])"}
+   {:var "partitionv", :form "(partitionv 2 3 [1 2 3 4 5 6 7])"}
+   {:var "partitionv", :form "(partitionv 3 3 [:pad] [1 2 3 4])"}
+   {:var "partitionv", :form "(partitionv 3 3 [] [1 2 3 4])"}
+   {:var "partitionv", :form "(partitionv 2 1 [1 2 3])"}
+   {:var "partitionv", :form "(partitionv 5 [1 2])"}
+   {:var "partitionv", :form "(partitionv 2 nil)"}
+   {:var "partitionv", :form "(vector? (first (partitionv 2 [1 2 3 4])))"}
+   {:var "partitionv", :form "(partitionv 2 4 (range 10))"}
+   {:var "partitionv", :form "(partitionv 3 2 [:a :b] (range 7))"}
+   {:var "partitionv", :form "(take 3 (partitionv 2 (range)))"}
+   {:var "partitionv", :form "(take 2 (partitionv 2 -1 [1 2 3]))"}
+   {:var "partitionv", :form "(partitionv 1 [1 2 3])"}
+   {:var "partitionv", :form "(subvec (first (partitionv 2 [1 2 3 4])) 0 1)"}
+   {:var "partitionv", :form "(partitionv 4 2 [0 0] [1 2 3 4 5])"}
+   {:var "partitionv", :form "(count (partitionv 2 (range 11)))"}
+   {:var "format", :form "(format \"%d\" 42)"}
+   {:var "format", :form "(format \"%5d\" 42)"}
+   {:var "format", :form "(format \"%-5d|\" 42)"}
+   {:var "format", :form "(format \"%05d\" 42)"}
+   {:var "format", :form "(format \"%x\" 255)"}
+   {:var "format", :form "(format \"%X\" 255)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%o\" 8)"}
+   {:var "format", :form "(format \"%e\" 1234.5678)"}
+   {:var "format", :form "(format \"%.2f\" 3.14159)"}
+   {:var "format", :form "(format \"%g\" 1.2345E-5)", :pending-bug "format %g default precision diverges (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%s\" nil)", :pending-bug "format %s of nil prints nil, canon prints null (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%b\" nil)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%c\" \\a)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%%\")"}
+   {:var "format", :form "(format \"a%nb\")", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%,d\" 1234567)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%+d\" 42)"}
+   {:var "format", :form "(format \"%(d\" -42)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%10.3f\" 3.14159)"}
+   {:var "format", :form "(format \"%s %s\" :kw 'sym)"}
+   {:var "format", :form "(format \"%2$s %1$s\" \"a\" \"b\")", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%.3s\" \"abcdef\")", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%S\" \"abc\")", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%a\" 1.5)", :pending-bug "format directive unsupported, passes through literally (mino/.local/BUGS.md: format directive gaps)"}
+   {:var "format", :form "(format \"%s\" 1/3)"}
+   {:var "format", :form "(format \"%e\" 0.0)"}
+   {:var "format", :form "(format \"%08.2f\" -3.5)"}
+   {:var "format", :form "(format \"%s\" [1 2 3])"}
+   {:var "format", :form "(format \"%s\" {:a 1})"}
+ ]}

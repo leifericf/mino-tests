@@ -16,9 +16,15 @@
 ;;
 ;; Usage from mino-tests root:
 ;;
-;;   clojure -M tests/adv/clojuredocs_jvm_capture.clj
+;;   clojure -M tests/adv/clojuredocs_jvm_capture.clj [in-path out-path]
 ;;
-;; Writes tests/adv/fixtures/clojuredocs-jvm-tuples.edn.
+;; With no args, reads the clojuredocs fixture and writes
+;; tests/adv/fixtures/clojuredocs-jvm-tuples.edn. The conformance-edge
+;; corpus reuses this script by passing its own fixture pair:
+;;
+;;   clojure -M tests/adv/clojuredocs_jvm_capture.clj \
+;;     tests/adv/fixtures/conformance-edge-tuples.edn \
+;;     tests/adv/fixtures/conformance-edge-jvm-tuples.edn
 
 (require '[clojure.string :as str]
          '[clojure.edn :as edn]
@@ -31,8 +37,10 @@
          '[clojure.zip]
          '[clojure.java.io :as io])
 
-(def in-path  "tests/adv/fixtures/clojuredocs-tuples.edn")
-(def out-path "tests/adv/fixtures/clojuredocs-jvm-tuples.edn")
+(def in-path  (or (first *command-line-args*)
+                  "tests/adv/fixtures/clojuredocs-tuples.edn"))
+(def out-path (or (second *command-line-args*)
+                  "tests/adv/fixtures/clojuredocs-jvm-tuples.edn"))
 
 (defn- tuple-key
   "Same key format the probe uses: ns/var:index, where index is the

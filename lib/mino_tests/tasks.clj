@@ -132,3 +132,11 @@
   (impl/run-script-suite-with-summary
     {:mode :smoke :seed 0 :only "diff_"
      :summary-path "output/clojuredocs-results.edn"}))
+
+(defn conformance-edge-refresh [& _]
+  (println "[mino-tests] conformance-edge-refresh (rebuild edge corpus, bb + JVM ground truth)")
+  (impl/conformance-edge-refresh))
+
+(defn conformance-edge-teeth [& _]
+  (println "[mino-tests] conformance-edge-teeth (planted-divergence self-test of the edge differ)")
+  (impl/conformance-edge-teeth))

@@ -89,6 +89,7 @@
    "tests/adv/script/diff_bc_control_shapes.clj"
     "tests/adv/script/diff_jit_specific.clj"
     "tests/adv/script/diff_clojuredocs.clj"
+    "tests/adv/script/diff_conformance_edge.clj"
     "tests/adv/script/diff_jvm_core.clj"])
 
 ;; --- driver ---

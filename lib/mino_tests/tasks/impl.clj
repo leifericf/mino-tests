@@ -689,3 +689,45 @@
       (catch e
         (println "  jvm-core-refresh failed:" (str e))
         1))))
+
+;; ---- Conformance edge corpus ----
+
+(defn conformance-edge-refresh
+  "Rebuild the conformance edge corpus from the authored forms file
+   (bb ground truth), then re-capture JVM Clojure ground truth for it.
+   Dev-host only: needs bb and the clojure CLI on PATH; CI and the
+   pre-land lane use the committed fixtures."
+  []
+  (let [capture (str (repo-root) "/tests/adv/conformance_edge_capture.clj")
+        jvm-cap (str (repo-root) "/tests/adv/clojuredocs_jvm_capture.clj")
+        tuples  "tests/adv/fixtures/conformance-edge-tuples.edn"
+        jvm-out "tests/adv/fixtures/conformance-edge-jvm-tuples.edn"]
+    (println "  exec: bb" capture)
+    (try
+      (let [r1 (sh "bb" capture)]
+        (println (:out r1))
+        (if (zero? (:exit r1))
+          (do (println "  exec: clojure -M" jvm-cap tuples jvm-out)
+              (let [r2 (sh "clojure" "-M" jvm-cap tuples jvm-out)]
+                (println (:out r2))
+                (if (zero? (:exit r2)) 0 1)))
+          1))
+      (catch e
+        (println "  conformance-edge-refresh failed:" (str e))
+        1))))
+
+(defn conformance-edge-teeth
+  "Self-test of the edge differ: plants a wrong expectation in a temp
+   corpus and asserts the probe flags it (plus pending and allowlist
+   semantics). Run after any change to the differ or capture scripts."
+  []
+  (let [script (str (repo-root) "/tests/adv/conformance_edge_teeth.clj")]
+    (println "  exec: bb" script)
+    (try
+      (let [r (sh "bb" script)]
+        (println (:out r))
+        (when (seq (:err r)) (println (:err r)))
+        (if (zero? (:exit r)) 0 1))
+      (catch e
+        (println "  conformance-edge-teeth failed:" (str e))
+        1))))

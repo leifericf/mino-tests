@@ -63,5 +63,9 @@
                        :task mino-tests.tasks/clojuredocs-summary}
   jvm-core-refresh  {:doc "Re-capture JVM Clojure ground truth for the core diff probe"
                      :task mino-tests.tasks/jvm-core-refresh}
+  conformance-edge-refresh {:doc "Rebuild the conformance edge corpus, bb + JVM ground truth"
+                            :task mino-tests.tasks/conformance-edge-refresh}
+  conformance-edge-teeth {:doc "Planted-divergence self-test of the conformance edge differ"
+                          :task mino-tests.tasks/conformance-edge-teeth}
   cov-summary      {:doc "Run llvm-cov pass and emit output/coverage-summary.edn"
                     :task mino-tests.tasks/cov-summary}}}

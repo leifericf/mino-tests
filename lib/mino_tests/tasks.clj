@@ -94,6 +94,10 @@
   (println "[mino-tests] zip-e2e (zip/gzip binary-level battery, campaign p6t2)")
   (impl/run-clj-file "tests/run_zip_e2e.clj"))
 
+(defn tar-e2e [& _]
+  (println "[mino-tests] tar-e2e (tar/tar.gz binary-level battery)")
+  (impl/run-clj-file "tests/run_tar_e2e.clj"))
+
 (defn signal-e2e [& _]
   (println "[mino-tests] signal-e2e (graceful-shutdown battery)")
   (impl/run-clj-file "tests/run_signal_e2e.clj"))

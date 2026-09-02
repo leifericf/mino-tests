@@ -45,6 +45,8 @@
                        :task mino-tests.tasks/html-e2e}
     zip-e2e           {:doc  "Zip/gzip E2E: frozen archive round trip through the real binary across timezones (compression-zip campaign)"
                        :task mino-tests.tasks/zip-e2e}
+    tar-e2e           {:doc  "Tar/tar.gz E2E: frozen archive round trip + extract through the real binary across timezones"
+                       :task mino-tests.tasks/tar-e2e}
     signal-e2e        {:doc  "Graceful-shutdown E2E: SIGTERM trap + run-server stop through the real binary"
                        :task mino-tests.tasks/signal-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"

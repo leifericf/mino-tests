@@ -49,7 +49,7 @@
                        :task mino-tests.tasks/tar-e2e}
     signal-e2e        {:doc  "Graceful-shutdown E2E: SIGTERM trap + run-server stop through the real binary"
                        :task mino-tests.tasks/signal-e2e}
-    ws-e2e            {:doc  "Websocket E2E: mino.ws connect/send/recv/close lifecycle against an in-process echo server"
+    ws-e2e            {:doc  "Websocket E2E: mino.ws client lifecycle plus the server upgrade in a child process, closed by SIGTERM"
                        :task mino-tests.tasks/ws-e2e}
   test-fault-inject {:doc  "Fault injection (simulated OOM) tests (moved from mino in v0.253.1)"
                      :task mino-tests.tasks/test-fault-inject}

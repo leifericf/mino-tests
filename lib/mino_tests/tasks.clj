@@ -103,7 +103,7 @@
   (impl/run-clj-file "tests/run_signal_e2e.clj"))
 
 (defn ws-e2e [& _]
-  (println "[mino-tests] ws-e2e (websocket client lifecycle battery)")
+  (println "[mino-tests] ws-e2e (websocket client and server battery)")
   (impl/run-clj-file "tests/run_ws_e2e.clj"))
 
 (defn test-fault-inject [& _]

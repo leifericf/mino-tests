@@ -102,6 +102,10 @@
   (println "[mino-tests] signal-e2e (graceful-shutdown battery)")
   (impl/run-clj-file "tests/run_signal_e2e.clj"))
 
+(defn ws-e2e [& _]
+  (println "[mino-tests] ws-e2e (websocket client lifecycle battery)")
+  (impl/run-clj-file "tests/run_ws_e2e.clj"))
+
 (defn test-fault-inject [& _]
   (println "[mino-tests] test-fault-inject (simulated OOM)")
   (impl/run-clj-file "tests/run_fault_inject.clj"))

@@ -130,6 +130,7 @@
    {:var "quot", :form "(quot 7/2 1/2)"}
    {:var "quot", :form "(quot 9223372036854775807 -1)"}
    {:var "quot", :form "(quot 1.0E18 3)"}
+   {:var "quot", :form "(quot -9223372036854775808 -1)"}
    {:var "rem", :form "(rem 7 2)"}
    {:var "rem", :form "(rem -7 2)"}
    {:var "rem", :form "(rem 7 -2)"}
@@ -138,6 +139,7 @@
    {:var "rem", :form "(rem 10N 3)"}
    {:var "rem", :form "(rem 7/2 1/2)"}
    {:var "rem", :form "(rem 0 5)"}
+   {:var "rem", :form "(rem -9223372036854775808 -1)"}
    {:var "iterate", :form "(take 5 (iterate inc 0))"}
    {:var "iterate", :form "(take 4 (iterate #(* 2 %) 1))"}
    {:var "iterate", :form "(first (iterate (fn [_] (throw (ex-info \"x\" {}))) :seed))"}

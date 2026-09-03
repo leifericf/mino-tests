@@ -17,7 +17,7 @@
    {:var "rationalize", :form "(rationalize 100.0)"}
    {:var "rationalize", :form "(rationalize 1e-5)"}
    {:var "rationalize", :form "(rationalize 1e300)"}
-   {:var "rationalize", :form "(rationalize 4.9E-324)", :pending-bug "double shortest-print diverges at subnormal extreme (mino/.local/BUGS.md: double shortest-print)"}
+   {:var "rationalize", :form "(rationalize 4.9E-324)"}
    {:var "rationalize", :form "(rationalize 10N)"}
    {:var "rationalize", :form "(+ (rationalize 0.1) (rationalize 0.2))"}
    {:var "rationalize", :form "(= 1/10 (rationalize 0.1))"}

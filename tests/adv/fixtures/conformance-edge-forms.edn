@@ -187,4 +187,11 @@
    {:var "min", :form "(min 1/2 2/3)"}
    {:var "min", :form "(min -0.0 0.0)"}
    {:var "min", :form "(min 0.0 -0.0)"}
+   {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]*\" \"a-b\")"}
+   {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]\" \"-\")"}
+   {:var "re-matches", :form "(re-matches #\"[0-9_-]\" \"-\")"}
+   {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]\" \"+\")"}
+   {:var "re-matches", :form "(re-matches #\"[A-Z0-9]\" \"-\")"}
+   {:var "re-matches", :form "(re-matches #\"[-A-Za-z0-9_]*\" \"a-b\")"}
+   {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]*\" \"aB9-_\")"}
  ]}

@@ -441,7 +441,7 @@
 (deftest pipeline-transforms
   (let [from (to-chan! [1 2 3 4 5])
         to   (chan 5)]
-    (pipeline 2 to (fn [x] (* x x)) from)
+    (pipeline 2 to (map (fn [x] (* x x))) from)
     (drain!)
     (let [result (atom #{})]
       (dotimes [_ 5]
@@ -452,7 +452,7 @@
 (deftest pipeline-preserves-ordering
   (let [from (to-chan! [1 2 3 4 5 6 7 8])
         to   (chan 8)]
-    (pipeline 4 to (fn [x] (* x x)) from)
+    (pipeline 4 to (map (fn [x] (* x x))) from)
     (drain!)
     (let [result (atom [])]
       (dotimes [_ 8]
@@ -463,7 +463,7 @@
 (deftest pipeline-closes-to
   (let [from (to-chan! [1])
         to   (chan 1)]
-    (pipeline 1 to inc from)
+    (pipeline 1 to (map inc) from)
     (drain!)
     (<!! to)
     (is (true? (closed? to)))))

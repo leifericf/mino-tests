@@ -158,7 +158,7 @@
 (deftest pipeline-ordering-n4
   (let [from (to-chan! [1 2 3 4 5 6 7 8])
         to   (chan 8)]
-    (pipeline 4 to (fn [x] (* x 10)) from)
+    (pipeline 4 to (map (fn [x] (* x 10))) from)
     (drain!)
     (let [result (atom [])]
       (dotimes [_ 8]

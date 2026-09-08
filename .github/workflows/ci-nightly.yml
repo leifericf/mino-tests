@@ -93,7 +93,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    timeout-minutes: 90
+    timeout-minutes: 105
 
     steps:
       - uses: actions/checkout@v4
@@ -110,12 +110,13 @@ jobs:
         timeout-minutes: 15
 
       - name: GC nursery-size fuzz
-        # Runs mino tests/run.clj at the two extreme nursery sizes
-        # (64K/256K). Catches bugs sensitive to major-phase ×
-        # test-position alignment -- varying the nursery shifts where
-        # each major falls in the test sequence.
+        # Runs mino tests/run.clj at the 64K extreme nursery. Catches
+        # bugs sensitive to major-phase × test-position alignment --
+        # the tight nursery shifts where each major falls in the test
+        # sequence. As the suite grew a single pass nearly fills the
+        # old budget, so the lane runs the extreme size only.
         run: ./mino/mino task gc-fuzz
-        timeout-minutes: 50
+        timeout-minutes: 65
 
       - name: GC stress on (gc!)-using subset
         # Runs the curated shard with MINO_GC_STRESS=1 (every alloc

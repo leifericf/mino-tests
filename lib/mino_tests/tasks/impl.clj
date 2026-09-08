@@ -524,7 +524,11 @@
         failed (filterv (fn [r] (not (:ok r))) results)]
     (if (empty? failed)
       (do (println "  gc-fuzz: OK across" (count sizes) "nursery sizes") 0)
-      (do (println "  gc-fuzz: failed at" (pr-str failed)) 1))))
+      ;; run-task! ignores a returned exit code, so signal failure by
+      ;; throwing -- otherwise a real nursery-sensitive regression rides
+      ;; through the CI step as a false green.
+      (throw (ex-info (str "gc-fuzz failed at " (pr-str failed))
+                      {:failed failed})))))
 
 (defn gc-stress-subset
   "Run the gc-bang stress shard with MINO_GC_STRESS=1. Every

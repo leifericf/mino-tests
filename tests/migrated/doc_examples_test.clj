@@ -369,9 +369,10 @@
   (is (= 42 (force (delay 42))))
   (is (= 42 (force 42))))
 
-(doc-test deref-delay
+(doc-test deref
   (let [d (delay (+ 1 2))]
-    (is (= 3 (deref-delay d)))))
+    (is (= 3 (deref d)))
+    (is (= 3 @d))))
 
 ;; --- Higher-order ---
 

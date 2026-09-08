@@ -183,12 +183,11 @@
 
 ;; The 2026-08-28 tightening of the former lax set. Each row names a
 ;; var, the arities its oracle arglists leave undeclared, and the
-;; arity-code the rejection must carry: every prim rejects with
-;; MAR001, while realized? is a core.clj defn override and rejects
-;; with the compiled-fn code MAR002. The re-derivation at this tip
-;; found two drifts against the 2026-08-27 sweep: realized? was
-;; already tight through the override, and ref-history-count also
-;; tolerated arity 2.
+;; arity-code the rejection must carry. Every entry here is now
+;; prim-backed and rejects with the prim arity code MAR001 --
+;; including realized?, which became prim-backed once delays went
+;; native (it no longer routes through a core.clj defn override, so
+;; it no longer carries the compiled-fn code MAR002).
 (def lax-tightened-rows
   [ ['clojure.core/with-meta            (range 3 10)      "MAR001"]
     ['clojure.core/symbol               (range 3 10)      "MAR001"]
@@ -197,7 +196,7 @@
     ['clojure.core/object-array         [2]               "MAR001"]
     ['clojure.core/byte-array           (range 3 10)      "MAR001"]
     ['clojure.core/conj!                (range 3 10)      "MAR001"]
-    ['clojure.core/realized?            [0 2]             "MAR002"]
+    ['clojure.core/realized?            [0 2]             "MAR001"]
     ['clojure.core/distinct?            [0]               "MAR001"]
     ['clojure.core/=                    [0]               "MAR001"]
     ['clojure.core/<                    [0]               "MAR001"]

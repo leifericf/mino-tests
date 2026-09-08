@@ -43,16 +43,18 @@
 
 (def ^:private e2e-error-script
   "A second child: the strict-XML error contract through the binary.
-  An undefined entity must throw a positioned ex-info; the child
-  catches it, prints the shape, and still exits 0 (the throw shape
-  is the assertion, not the exit)."
+  An undefined entity must throw a positioned error; the child
+  catches it and prints the shape. Classification (kind, code)
+  reads off the error data map (:mino/kind, :mino/code); the
+  positioned domain detail stays under ex-data. The child still
+  exits 0 (the throw shape is the assertion, not the exit)."
   (str "(require '[clojure.xml :as xml])\n"
        "(try (xml/parse \"<a>&nosuch;</a>\")\n"
        "  (println \"no-throw\")\n"
        "  (catch e\n"
        "    (let [d (ex-data e)]\n"
-       "      (println \"xml-error-kind\" (:kind d))\n"
-       "      (println \"xml-error-code\" (:code d))\n"
+       "      (println \"xml-error-kind\" (:mino/kind e))\n"
+       "      (println \"xml-error-code\" (:mino/code e))\n"
        "      (println \"xml-error-line\" (:line (:location d)))\n"
        "      (println \"xml-error-col\" (:col (:location d))))))\n"
        "(println \"done\")\n"))
@@ -116,7 +118,7 @@
     (is (zero? (:exit r))
         (str "child exited " (:exit r) "; output:\n" (:out r)))
     (is (= ":xml/parse" (get m "xml-error-kind")))
-    (is (= ":undefined-entity" (get m "xml-error-code")))
+    (is (= "MXP001" (get m "xml-error-code")))
     (is (= "1" (get m "xml-error-line")))
     (is (= "4" (get m "xml-error-col"))
         "position at the reference's ampersand (1-based)")

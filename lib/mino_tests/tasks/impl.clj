@@ -552,14 +552,15 @@
   ([] (mutation "src/read"))
   ([dir]
    (mutation-doctor)
-   (let [root    (repo-root)
-         runner  (mull-runner)
-         binp    (str root "/tests/mutation/build/mino_mut")
-         oracle  (kill-signal-argv dir)
-         dir-tag (str/replace dir "/" "_")
-         rpt-dir (str root "/tests/mutation/reports")
-         raw     (str rpt-dir "/" dir-tag ".ide.txt")
-         edn     (str rpt-dir "/" dir-tag ".edn")]
+   (let [root      (repo-root)
+         mino-root (mino-src-root)
+         runner    (mull-runner)
+         binp      (str root "/tests/mutation/build/mino_mut")
+         oracle    (kill-signal-argv dir)
+         dir-tag   (str/replace dir "/" "_")
+         rpt-dir   (str root "/tests/mutation/reports")
+         raw       (str rpt-dir "/" dir-tag ".ide.txt")
+         edn       (str rpt-dir "/" dir-tag ".edn")]
      (cond
        (not (file-exists? binp))
        (do (println "  ERROR: mino_mut not built; run mutation-build" dir "first")
@@ -577,10 +578,13 @@
          (println "  oracle: " (str/join " " oracle))
          ;; Route the full IDE output to a file: the survivor block can
          ;; run to hundreds of lines, past sh's captured-output limit.
+         ;; Run from the mino source root so the oracle's own relative
+         ;; `(require "tests/test")` / test-file loads resolve.
          (let [argv (concat [runner "--reporters" "IDE"
                              "--ide-reporter-show-killed" binp]
                             oracle)
-               cmd  (str (str/join " " (map pr-str argv)) " > "
+               cmd  (str "cd " (pr-str mino-root) " && "
+                         (str/join " " (map pr-str argv)) " > "
                          (pr-str raw) " 2>&1")
                _    (println "  running mull-runner (this takes a while)...")
                r    (sh "sh" "-c" cmd)

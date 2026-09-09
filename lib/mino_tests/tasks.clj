@@ -54,6 +54,11 @@
   (println "[mino-tests] build-cov")
   (impl/build-cov-binary))
 
+(defn mutation-doctor [& _]
+  (println "[mino-tests] mutation-doctor (assert matched clang/mull LLVM major)")
+  (impl/mutation-doctor)
+  0)
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

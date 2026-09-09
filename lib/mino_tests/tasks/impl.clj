@@ -267,6 +267,103 @@
     (or (when via-which (str/trim via-which))
         (when via-xcrun (str/trim via-xcrun)))))
 
+;; ---- Mutation lane: matched-toolchain resolvers -------------------
+;;
+;; Mull mutates LLVM IR via a pass plugin loaded into clang, then runs
+;; one binary once per mutant. Apple clang cannot load the plugin and
+;; the plugin's ABI is pinned to one LLVM major, so the lane MUST use a
+;; real LLVM clang whose major matches the installed Mull. Phase 0
+;; pinned llvm@19 + mull@19 0.34.0 on this host. Every tool is resolved
+;; by ABSOLUTE path: Homebrew llvm@19 is keg-only (no clang symlink on
+;; PATH) and the Phase 0 mull install is a plain prefix, so PATH must
+;; never be relied on here.
+
+(defn- llvm19-prefix
+  "Absolute prefix of the matched keg-only LLVM. MINO_LLVM19_PREFIX
+   overrides; defaults to the Homebrew llvm@19 keg."
+  []
+  (or (getenv "MINO_LLVM19_PREFIX")
+      (let [via-brew (try (sh! "brew" "--prefix" "llvm@19") (catch _ nil))]
+        (when via-brew (str/trim via-brew)))
+      "/opt/homebrew/opt/llvm@19"))
+
+(defn- mull-prefix
+  "Absolute prefix of the matched Mull install. MINO_MULL_PREFIX
+   overrides; defaults to the Phase 0 install under /tmp/mull19.
+   mull-runner-N lives in <prefix>/bin, the IR-frontend plugin in
+   <prefix>/lib."
+  []
+  (or (getenv "MINO_MULL_PREFIX")
+      "/tmp/mull19"))
+
+(defn mut-clang
+  "Absolute path to the matched LLVM clang the mutation lane compiles
+   with. Never a bare `clang` on PATH."
+  []
+  (str (llvm19-prefix) "/bin/clang"))
+
+(defn mull-runner
+  "Absolute path to mull-runner-19."
+  []
+  (str (mull-prefix) "/bin/mull-runner-19"))
+
+(defn mull-ir-frontend
+  "Absolute path to the mull-ir-frontend-19 pass plugin."
+  []
+  (str (mull-prefix) "/lib/mull-ir-frontend-19"))
+
+(defn- llvm-major
+  "Extract the LLVM major version from a `--version` blob. clang prints
+   `... clang version 19.1.7`; mull-runner prints a `LLVM: 19.1.7`
+   line. Returns the integer major or nil."
+  [text]
+  (when text
+    (let [m (or (re-find #"clang version (\d+)\." text)
+                (re-find #"LLVM:\s*(\d+)\." text)
+                (re-find #"version (\d+)\." text))]
+      (when m (long (read-string (second m)))))))
+
+(defn mutation-doctor
+  "Assert the matched (clang, mull) pair is present and their LLVM
+   majors agree. Fails loudly (throws) on a missing tool or a major
+   mismatch -- Mull's pass ABI is version-locked, so a mismatch would
+   silently mutate a phantom IR. Returns the agreed major on success."
+  []
+  (let [clang    (mut-clang)
+        runner   (mull-runner)
+        frontend (mull-ir-frontend)]
+    (println "  clang:           " clang)
+    (println "  mull-runner:     " runner)
+    (println "  mull-ir-frontend:" frontend)
+    (when-not (file-exists? clang)
+      (throw (ex-info (str "matched clang not found at " clang
+                           " (install llvm@19 or set MINO_LLVM19_PREFIX)")
+                      {:clang clang})))
+    (when-not (file-exists? runner)
+      (throw (ex-info (str "mull-runner-19 not found at " runner
+                           " (install mull@19 or set MINO_MULL_PREFIX)")
+                      {:runner runner})))
+    (when-not (file-exists? frontend)
+      (throw (ex-info (str "mull-ir-frontend-19 not found at " frontend
+                           " (install mull@19 or set MINO_MULL_PREFIX)")
+                      {:frontend frontend})))
+    (let [clang-ver  (try (sh! clang "--version") (catch e (str e)))
+          runner-ver (try (sh! runner "--version") (catch e (str e)))
+          cmaj (llvm-major clang-ver)
+          rmaj (llvm-major runner-ver)]
+      (println "  clang LLVM major:      " cmaj)
+      (println "  mull-runner LLVM major:" rmaj)
+      (when (or (nil? cmaj) (nil? rmaj))
+        (throw (ex-info "could not parse an LLVM major from --version"
+                        {:clang-major cmaj :runner-major rmaj})))
+      (when-not (= cmaj rmaj)
+        (throw (ex-info (str "LLVM major mismatch: clang " cmaj
+                             " != mull-runner " rmaj
+                             " -- Mull's pass ABI is version-locked")
+                        {:clang-major cmaj :runner-major rmaj})))
+      (println "  mutation-doctor: matched pair OK (LLVM" cmaj ")")
+      cmaj)))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

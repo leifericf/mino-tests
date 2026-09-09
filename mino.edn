@@ -43,6 +43,10 @@
                      :task mino-tests.tasks/mutation-vmbc}
   mutation-all      {:doc  "Build+score the ranked dirs (gc pending) with an aggregate summary"
                      :task mino-tests.tasks/mutation-all}
+  mutation-tce      {:doc  "Prune provably-equivalent survivors of a lane via Trivial Compiler Equivalence (default src/read)"
+                     :task mino-tests.tasks/mutation-tce}
+  mutation-tce-all  {:doc  "TCE-prune every lane and print the aggregate equivalent-fraction"
+                     :task mino-tests.tasks/mutation-tce-all}
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"

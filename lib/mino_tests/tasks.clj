@@ -101,6 +101,15 @@
   (println "[mino-tests] mutation-all (build+score ranked dirs, aggregate summary)")
   (impl/mutation-all))
 
+(defn mutation-tce [& args]
+  (let [dir (or (first args) "src/read")]
+    (println "[mino-tests] mutation-tce (prune provably-equivalent survivors in" dir ")")
+    (impl/mutation-tce dir)))
+
+(defn mutation-tce-all [& _]
+  (println "[mino-tests] mutation-tce-all (TCE-prune every lane, aggregate equivalent-fraction)")
+  (impl/mutation-tce-all))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

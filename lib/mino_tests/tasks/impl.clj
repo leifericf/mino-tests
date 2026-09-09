@@ -874,6 +874,234 @@
     (let [failed (filter #(= :build-failed (:status %)) results)]
       (if (seq failed) 1 0))))
 
+;; ---- Mutation lane: Trivial Compiler Equivalence (TCE) pruning ----
+;;
+;; Risk R2 (equivalent-mutant noise) materialized hard: the four lanes
+;; carry ~2007 survivors, far too many to hand-write regression tests
+;; for. TCE prunes the provably-equivalent ones cheaply and
+;; deterministically. The insight: a mutant that the -O2 compiler folds
+;; to byte-identical object code CANNOT change any observable behaviour,
+;; so no test could ever kill it -- it is provably equivalent and safe
+;; to auto-exclude from the baseline gate.
+;;
+;; Friction the plan names: Mull's all-mutants-in-one-binary model does
+;; NOT hand out per-mutant object files, so TCE is a separate step. We
+;; materialize the mutation ourselves from Mull's mutation-point info:
+;; each survivor carries file:line:col + operator, and the operator maps
+;; to an exact source-token rewrite (== -> !=, > -> >=, + -> -, ...).
+;; The Mull column is 1-based and points at the first char of the
+;; operator token (verified on this host), so the rewrite is a precise
+;; textual substitution. We then compile the mutated TU at -O2 with the
+;; SAME flags as mino_mut's build and byte-compare its object against the
+;; unmutated TU's -O2 object. -O2 compiles are byte-deterministic on
+;; this toolchain (verified), so an identical object == provable
+;; equivalence.
+;;
+;; Outcomes per survivor:
+;;   :equivalent   -- object byte-identical to baseline => provably equiv
+;;   :differs      -- object differs => a real behavioural mutant (a
+;;                    genuine survivor the oracle failed to kill)
+;;   :compile-fail -- the source-level rewrite does not compile (e.g.
+;;                    ptr - ptr rewritten to ptr + ptr). NOT equivalent:
+;;                    it is an artifact of source reconstruction (Mull's
+;;                    IR-level mutant differs from a source rewrite), so
+;;                    it is retained as a non-equivalent survivor.
+;;   :unknown-op   -- operator not in the table (retained, non-equiv).
+
+(def ^:private tce-op-table
+  {"cxx_eq_to_ne"  ["==" "!="]
+   "cxx_ne_to_eq"  ["!=" "=="]
+   "cxx_lt_to_le"  ["<"  "<="]
+   "cxx_lt_to_ge"  ["<"  ">="]
+   "cxx_le_to_lt"  ["<=" "<"]
+   "cxx_le_to_gt"  ["<=" ">"]
+   "cxx_gt_to_ge"  [">"  ">="]
+   "cxx_gt_to_le"  [">"  "<="]
+   "cxx_ge_to_gt"  [">=" ">"]
+   "cxx_ge_to_lt"  [">=" "<"]
+   "cxx_add_to_sub" ["+" "-"]
+   "cxx_sub_to_add" ["-" "+"]
+   "cxx_mul_to_div" ["*" "/"]
+   "cxx_div_to_mul" ["/" "*"]
+   "cxx_rem_to_div" ["%" "/"]
+   "cxx_post_inc_to_post_dec" ["++" "--"]
+   "cxx_post_dec_to_post_inc" ["--" "++"]})
+
+(defn- tce-incflags []
+  (mapv #(str "-I" (mino-src-root) "/" %) mino-incdirs))
+
+(defn- tce-compile
+  "Compile a TU at -O2 with mino's exact IR-flag set into out-obj.
+   extra-inc prepends a quote-include base dir (the original TU's
+   directory) so a relocated mutated copy still resolves its relative
+   #include \"...\" headers. Returns the sh exit code."
+  [src-abs out-obj extra-inc]
+  (let [clang (mut-clang)
+        argv  (concat [clang] mino-mut-cflags
+                      (when extra-inc [(str "-I" extra-inc)])
+                      (tce-incflags)
+                      ["-c" src-abs "-o" out-obj])]
+    (:exit (apply sh argv))))
+
+(defn- tce-mutate-line
+  "Rewrite `old` -> `new` at 1-based `col` in `line`. Returns the
+   rewritten line, or nil if the token at col is not `old` (a mismatch
+   the caller records rather than silently mangling)."
+  [line col old new]
+  (let [i (dec col)]
+    (when (and (>= i 0) (<= (+ i (count old)) (count line))
+               (= (subs line i (+ i (count old))) old))
+      (str (subs line 0 i) new (subs line (+ i (count old)))))))
+
+(defn- tce-one
+  "Classify one survivor via TCE. baseline-obj is the precompiled -O2
+   object of the unmutated TU. Returns the survivor with :tce added."
+  [s baseline-obj tmp-root]
+  (let [{:keys [file line col operator]} s
+        pair (tce-op-table operator)]
+    (if (nil? pair)
+      (assoc s :tce :unknown-op)
+      (let [[old new] pair]
+        (try
+          (let [src   (slurp file)
+                ls    (vec (str/split src #"\n" -1))
+                orig  (nth ls (dec line) nil)
+                mut   (when orig (tce-mutate-line orig col old new))]
+            (if (nil? mut)
+              (assoc s :tce :token-mismatch)
+              (let [dir   (str/join "/" (butlast (str/split file #"/")))
+                    ext   (str "_" line "_" col "_" operator)
+                    tmp-c (str tmp-root "/tce" ext "__"
+                               (str/replace file "/" "_"))
+                    obj   (str tmp-c ".o")
+                    ls2   (assoc ls (dec line) mut)]
+                (spit tmp-c (str/join "\n" ls2))
+                (let [rc (tce-compile tmp-c obj dir)]
+                  (cond
+                    (not (zero? rc)) (assoc s :tce :compile-fail)
+                    (zero? (:exit (sh "cmp" "-s" baseline-obj obj)))
+                    (assoc s :tce :equivalent)
+                    :else (assoc s :tce :differs))))))
+          (catch e (assoc s :tce :error)))))))
+
+;; TCE cost ceiling. A per-survivor compile+diff is ~0.03-0.25 s; pmap
+;; fans it across cores. Measured: reader's 503 survivors finish in
+;; ~15 s wall. The whole ~2007-survivor set is well under the ~10 min
+;; budget, so the committed default runs TCE over the FULL survivor set
+;; per lane (no sampling). MINO_TCE_SAMPLE sets a per-lane cap; when a
+;; lane exceeds it the survivors are sampled EVENLY BY OPERATOR (a
+;; representative slice of every operator class, never a silent head
+;; truncation) and the sampled scope is logged into the report.
+(defn- tce-sample
+  "If MINO_TCE_SAMPLE caps the count and survivors exceeds it, return a
+   representative subset spread evenly across operator classes plus a
+   log map; else return all with :sampled? false."
+  [survivors]
+  (let [cap (some-> (getenv "MINO_TCE_SAMPLE") str/trim read-string long)]
+    (if (or (nil? cap) (<= (count survivors) cap))
+      {:subset survivors :sampled? false :cap cap}
+      (let [groups (group-by :operator survivors)
+            k (count groups)
+            per (max 1 (long (/ cap k)))
+            subset (vec (mapcat (fn [[_ v]] (take per v)) groups))]
+        {:subset subset :sampled? true :cap cap :per-operator per
+         :sampled-count (count subset)
+         :operators-sampled (into (sorted-map)
+                                   (map (fn [[o v]] [o (min per (count v))])
+                                        groups))}))))
+
+(defn mutation-tce
+  "Prune provably-equivalent survivors of `dir` via Trivial Compiler
+   Equivalence. Reads tests/mutation/reports/<dir-tag>.edn, reconstructs
+   each survivor's source mutation, compiles it at -O2 with mino's exact
+   flags, and byte-diffs the object against the unmutated TU's -O2
+   object. Writes tests/mutation/reports/<dir-tag>.tce.edn with a :tce
+   tag per survivor and prints the equivalent-fraction (the key R2
+   measurement). Returns 0 on a completed run."
+  ([] (mutation-tce "src/read"))
+  ([dir]
+   (let [root    (repo-root)
+         dir-tag (str/replace dir "/" "_")
+         rpt-dir (str root "/tests/mutation/reports")
+         in-edn  (str rpt-dir "/" dir-tag ".edn")
+         out-edn (str rpt-dir "/" dir-tag ".tce.edn")
+         tmp-root (str root "/tests/mutation/build/tce")]
+     (if-not (file-exists? in-edn)
+       (do (println "  ERROR: no report at" in-edn "-- run mutation" dir "first")
+           1)
+       (let [report    (read-string (slurp in-edn))
+             survivors (:survivors report)
+             samp      (tce-sample survivors)
+             subset    (:subset samp)
+             files     (distinct (map :file subset))]
+         (println "  dir:      " dir)
+         (println "  survivors:" (count survivors))
+         (when (:sampled? samp)
+           (println "  SAMPLED to" (:sampled-count samp)
+                    "(cap" (:cap samp) ", ~" (:per-operator samp)
+                    "per operator):")
+           (println "   " (pr-str (:operators-sampled samp))))
+         (sh! "mkdir" "-p" tmp-root)
+         (println "  compiling" (count files) "baseline TU objects at -O2...")
+         (let [baselines
+               (into {}
+                     (map (fn [f]
+                            (let [obj (str tmp-root "/base__"
+                                           (str/replace f "/" "_") ".o")
+                                  dir (str/join "/" (butlast (str/split f #"/")))]
+                              (tce-compile f obj dir)
+                              [f obj]))
+                          files))
+               _ (println "  running TCE over" (count subset) "survivors (pmap)...")
+               t0 (time-ms)
+               classified (doall
+                           (pmap #(tce-one % (baselines (:file %)) tmp-root)
+                                 subset))
+               dt (- (time-ms) t0)
+               by-tce (frequencies (map :tce classified))
+               equiv (get by-tce :equivalent 0)
+               n (count classified)
+               out {:dir dir
+                    :survivors-total (count survivors)
+                    :tce-classified n
+                    :sampled? (:sampled? samp)
+                    :sample (when (:sampled? samp)
+                              (dissoc samp :subset))
+                    :by-tce (into (sorted-map)
+                                  (map (fn [[k v]] [k v]) by-tce))
+                    :equivalent-fraction
+                    (if (pos? n) (/ (double equiv) n) 0.0)
+                    :classified classified}]
+           (spit out-edn (with-out-str (println (pr-str out))))
+           (println (format "  TCE wall-clock: %.1fs" (/ dt 1000.0)))
+           (println "  by-tce:" (pr-str (:by-tce out)))
+           (println (format "  equivalent-fraction: %.1f%% (%d/%d provably equivalent)"
+                            (* 100.0 (:equivalent-fraction out)) equiv n))
+           (println "  report:" out-edn)
+           0))))))
+
+(defn mutation-tce-all
+  "Run TCE pruning over every lane's report and print an aggregate
+   equivalent-fraction table."
+  []
+  (let [dirs ["src/read" "src/values" "src/eval/bc" "src/gc"]
+        results (mapv (fn [d]
+                        (mutation-tce d)
+                        (let [edn (str (repo-root) "/tests/mutation/reports/"
+                                       (str/replace d "/" "_") ".tce.edn")]
+                          (try (read-string (slurp edn)) (catch e nil))))
+                      dirs)]
+    (println)
+    (println "=== mutation-tce aggregate (equivalent-fraction per lane) ===")
+    (doseq [r results :when r]
+      (println (format "  %-12s %d/%d equivalent (%.1f%%)%s"
+                       (:dir r)
+                       (get (:by-tce r) :equivalent 0)
+                       (:tce-classified r)
+                       (* 100.0 (:equivalent-fraction r))
+                       (if (:sampled? r) "  [SAMPLED]" ""))))
+    0))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

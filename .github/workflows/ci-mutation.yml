@@ -1,0 +1,116 @@
+name: ci-mutation
+
+# Nightly mutation-testing lane. This is an EXPERIMENT promoted to a
+# standing nightly job (see the mutation plan's honest-framing decision):
+# TCE proved only 0.6% of survivors are compiler-equivalent, so the value
+# is NOT a high mutation score -- it is the check-mutation regression gate
+# (new survivors vs the committed baseline) plus the 9-genuine-gap
+# shortlist. This job therefore NEVER gates on a raw survivor count; it
+# gates only on check-mutation.
+#
+# Trigger is schedule + workflow_dispatch ONLY -- never push/pull_request
+# -- so on-push CI (ci.yml) is unaffected and push latency stays low. The
+# heavy mutation run mirrors the existing gc-fuzz / gc-verify precedent in
+# ci-nightly.yml: the slow, resource-heavy steps are allowed-to-fail so a
+# runner hiccup (a mull timeout, an apt flake) does not spuriously red the
+# tree, while the actual pass/fail signal -- check-mutation against
+# baseline.edn -- is a REAL gate with no continue-on-error.
+#
+# The lane runs inside docker/mutation.Dockerfile, which pins the matched
+# (LLVM 19, mull@19) pair and self-verifies it at build time. That is the
+# reproducible CI home the "use Docker Linux for the tool-dependent lanes"
+# doctrine already prescribes for sanitizers and coverage.
+
+on:
+  schedule:
+    # 06:00 UTC daily. Offset an hour past ci-nightly's 05:00 soak/gc
+    # window so the two nightlies do not contend for the same runners.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  mutation:
+    name: mutation (reader lane, docker llvm19+mull19)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout (with submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build the pinned mutation image
+        # The image self-doctors the matched (LLVM 19 == mull LLVM 19)
+        # pair at build time, so a drifted pin fails HERE, loudly, before
+        # any mutation run. Tag it locally for the run steps below.
+        run: |
+          docker build \
+            -f docker/mutation.Dockerfile \
+            -t mino-mutation:ci \
+            .
+
+      - name: Doctor + build mino_mut + score the reader lane
+        # SCOPED to the reader lane only (Cost controls: never the whole
+        # tree). read has no verify oracle and its fast subset runs in
+        # ~5-10s, so it is the cheapest lane to run nightly and the one
+        # the plan wires first. The steps run inside the pinned image
+        # against the mounted checkout:
+        #   mutation-doctor  -- the REAL task re-asserts the matched pair
+        #   mutation-build   -- compile mino_mut with mutants in src/read
+        #   mutation         -- score src/read via its kill-signal oracle
+        #   mutation-tce     -- prune provably-equivalent survivors
+        # This whole heavy block is allowed-to-fail (like gc-fuzz): a mull
+        # timeout or transient build flake must not red the tree. The gate
+        # is the next step, check-mutation, which is NOT allowed to fail.
+        continue-on-error: true
+        env:
+          # Bound the per-mutant fan-out and cap wall-clock so the nightly
+          # budget holds even on a slow runner.
+          MINO_MULL_WORKERS: '4'
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            -e MINO_MULL_WORKERS \
+            mino-mutation:ci \
+            bash -c '
+              set -e
+              # Bootstrap the runtime under test from the pinned submodule.
+              ( cd mino && make )
+              ./mino/mino task mutation-doctor
+              ./mino/mino task mutation-build
+              ./mino/mino task mutation
+              ./mino/mino task mutation-tce
+            '
+
+      - name: check-mutation gate (new survivors vs baseline)
+        # THE REAL GATE. Fails only on a survivor whose site+operator key
+        # is absent from tests/mutation/baseline.edn -- i.e. a NEW survivor
+        # a code or test change introduced. A baselined survivor (proven-
+        # equivalent, oracle-gap, or a known genuine gap) passes. Runs
+        # against the reports the previous step regenerated when it
+        # succeeded, or against the committed reports for a cheap re-gate
+        # when the heavy run hiccuped. NO continue-on-error: a genuine new
+        # survivor reds this nightly.
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            mino-mutation:ci \
+            bash -c '
+              set -e
+              ( cd mino && make )
+              ./mino/mino task check-mutation
+            '
+
+      - name: Upload mutation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-reports
+          path: tests/mutation/reports/*.edn
+          if-no-files-found: ignore

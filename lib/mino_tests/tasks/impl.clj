@@ -747,6 +747,76 @@
                  (print-summary dir edn summary)
                  0)))))))))
 
+;; ---- Mutation lane: aggregate over the ranked dirs ----------------
+;;
+;; `mutation-all` runs the ranked critical dirs in the plan's blast-
+;; radius order and prints one aggregate score table. Each dir gets a
+;; fresh mino_mut (the build reuses one output path), so the dirs run
+;; strictly sequentially: build dir, score dir, next dir. gc's kill-
+;; signal (bounded out-of-process verify repros) lands in Phase 3, so gc
+;; is listed but marked PENDING and skipped -- no silent omission.
+
+;; Blast-radius rank from the plan's "Highest-benefit target areas".
+;; :ready? gates whether the dir has a registered oracle yet.
+(def ^:private mutation-ranked-dirs
+  [{:dir "src/gc"      :label "gc"     :ready? false}
+   {:dir "src/read"    :label "read"   :ready? true}
+   {:dir "src/eval/bc" :label "vm/bc"  :ready? true}
+   {:dir "src/values"  :label "values" :ready? true}])
+
+(defn mutation-all
+  "Run the ranked critical dirs end to end (build then score each) and
+   print an aggregate score summary. gc is marked PENDING until its
+   Phase 3 verify-repro oracle lands. Returns 0 when every ready dir
+   completed; a low score is a finding, not a failure."
+  []
+  (mutation-doctor)
+  (let [results
+        (mapv
+         (fn [{:keys [dir label ready?]}]
+           (if-not ready?
+             (do (println)
+                 (println "=== " label "(" dir ") : PENDING (Phase 3 oracle) ===")
+                 {:dir dir :label label :status :pending})
+             (do
+               (println)
+               (println "=== " label "(" dir ") : build ===")
+               (let [brc (mutation-build dir)]
+                 (if-not (zero? brc)
+                   {:dir dir :label label :status :build-failed}
+                   (do
+                     (println "=== " label "(" dir ") : score ===")
+                     (let [rc (mutation dir)
+                           edn (str (repo-root) "/tests/mutation/reports/"
+                                    (str/replace dir "/" "_") ".edn")
+                           summary (try (read-string (slurp edn))
+                                        (catch e nil))]
+                       {:dir dir :label label :status :done
+                        :rc rc :summary summary})))))))
+         mutation-ranked-dirs)]
+    (println)
+    (println "=== mutation-all aggregate (ranked) ===")
+    (doseq [{:keys [label status summary]} results]
+      (case status
+        :pending
+        (println (format "  %-8s PENDING (Phase 3)" label))
+        :build-failed
+        (println (format "  %-8s BUILD FAILED" label))
+        :done
+        (if summary
+          (println (format "  %-8s %d killed / %d survived / %s total  %s%s"
+                           label
+                           (or (:killed summary) 0)
+                           (or (:survived summary) 0)
+                           (str (:total summary))
+                           (if (:total summary)
+                             (format "%.1f%%" (* 100.0 (:score summary)))
+                             "n/a")
+                           (if (:jit-parity summary) "  (jit parity)" "")))
+          (println (format "  %-8s (no report)" label)))))
+    (let [failed (filter #(= :build-failed (:status %)) results)]
+      (if (seq failed) 1 0))))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

@@ -89,6 +89,10 @@
   (println "[mino-tests] mutation-vmbc (score src/eval/bc under jit=off/on parity)")
   (impl/mutation "src/eval/bc"))
 
+(defn mutation-all [& _]
+  (println "[mino-tests] mutation-all (build+score ranked dirs, aggregate summary)")
+  (impl/mutation-all))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

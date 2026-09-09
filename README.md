@@ -3,17 +3,26 @@
 Adversarial / E2E / soak test battery for [mino](https://github.com/leifericf/mino).
 
 This is the satellite test suite — heavy, multi-runtime, concurrency-soak,
-fuzz, sanitizer-trinity, coverage, and adversarial probes that don't
-belong in the main repo's unit-test set. The two repos pair up:
+generative, coverage, and adversarial probes that don't belong in the main
+repo's unit-test set. The three repos pair up:
 
 | Repo | Holds |
 |---|---|
 | `mino` (`tests/`) | Language-semantics unit tests — one primitive or special form at a time, sub-second, single-runtime. |
-| `mino-tests` (this) | Anything multi-runtime, concurrency-heavy, fuzz, soak, sanitizer-trinity, coverage, adversarial. |
+| `mino-tests` (this) | Anything multi-runtime, concurrency-heavy, soak, coverage, adversarial: mino-level generative and differential probes, mutation testing, GC-nursery stress, sanitized C embed harnesses. |
+| `mino-bench` | Benchmarks and the C-boundary fuzzers — byte-level coverage/mutation fuzzing of the reader, eval, regex, and parsers under libFuzzer and UBSan, co-located with the C build that recompiles mino's sources. |
+
+Two things carry the word "fuzz" and are easy to confuse. The mino-level
+generative and adversarial probes here (`tests/adv/`, the migrated reader
+robustness tests, `gc-fuzz`) run `.clj` through the mino binary and assert
+invariants or parity. The byte-level, sanitizer-instrumented fuzzing of the
+C surface lives in `mino-bench`, because it links mino's C objects directly
+and needs that repo's toolchain. Neither duplicates the other.
 
 When in doubt about where a test belongs: does it exercise the runtime in
 isolation, or does it cross runtimes / take >100ms / depend on external
-tooling? The former stays in `mino`; the latter belongs here.
+tooling? The former stays in `mino`; the latter belongs here — unless it is
+C-level fuzzing or a benchmark, which belong in `mino-bench`.
 
 ## Layout
 

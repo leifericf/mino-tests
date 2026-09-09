@@ -109,7 +109,8 @@
    "tests/adv/embed/adv_clone_zoo.c"
    "tests/adv/embed/adv_pool_topology.c"
    "tests/adv/embed/adv_stm_mix.c"
-   "tests/adv/embed/adv_fault_replay.c"])
+   "tests/adv/embed/adv_fault_replay.c"
+   "tests/adv/embed/adv_fault_inject.c"])
 
 ;; Shared library files compiled in alongside the probes.
 (def harness-libs
@@ -120,71 +121,13 @@
 ;; --- C-side harness build ---
 ;;
 ;; Links the harness binary against the mino submodule's runtime
-;; sources. mino doesn't produce a libmino.a -- only the binary and
-;; per-module .o files. We pick up the .o files directly so the
-;; harness shares the same compile units.
-
-;; The lib-srcs list mirrors mino's own lib/mino/tasks/builtin.clj
-;; lib-srcs -- intentionally inlined so a mino API drift surfaces here
-;; as a build break rather than silently linking against an older
-;; surface. Keep in sync with that list when mino adds/moves/splits a
-;; translation unit (last synced against mino's v0.423.x lib-srcs).
-(def mino-lib-srcs
-  ["src/eval/eval.c" "src/diag/diag.c" "src/eval/special.c"
-   "src/eval/special_registry.c"
-   "src/eval/defs.c" "src/eval/bindings.c"
-   "src/eval/bindings_dyn.c" "src/eval/bindings_destr.c"
-   "src/eval/control.c" "src/eval/fn.c"
-   "src/eval/fn_argv.c" "src/eval/fn_nonfn.c"
-   "src/eval/bc/vm.c" "src/eval/bc/compile.c"
-   "src/eval/bc/gc_handlers.c"
-   "src/eval/bc/jit/entry.c" "src/eval/bc/jit/stats.c"
-   "src/eval/bc/jit/helpers.c" "src/eval/bc/jit/helpers_loop.c"
-   "src/eval/bc/jit/patcher.c"
-   "src/eval/bc/jit/patcher_x86_64.c"
-   "src/eval/bc/jit/emit.c" "src/eval/bc/jit/region.c"
-   "src/runtime/state.c" "src/runtime/var.c"
-   "src/runtime/error.c" "src/runtime/env.c"
-   "src/runtime/ns_env.c"
-   "src/runtime/path_buf.c"
-   "src/runtime/host_threads.c"
-   "src/runtime/capabilities.c"
-   "src/runtime/image.c"
-   "src/runtime/image_load.c"
-   "src/gc/driver.c" "src/gc/roots.c" "src/gc/major.c"
-   "src/gc/barrier.c" "src/gc/minor.c"
-   "src/gc/trace.c" "src/gc/profile.c" "src/runtime/module.c"
-   "src/public/gc.c" "src/public/embed.c"
-   "src/values/val.c" "src/values/gc_handlers.c"
-   "src/collections/vec.c" "src/collections/map.c"
-   "src/collections/map_hash.c" "src/collections/map_owned.c"
-   "src/collections/chunk.c"
-   "src/collections/queue.c"
-   "src/collections/bytes.c"
-   "src/collections/rbtree.c"
-   "src/collections/builders.c"
-   "src/collections/gc_handlers.c"
-   "src/collections/iter.c" "src/eval/read.c" "src/eval/read_numeric.c" "src/eval/print.c"
-   "src/eval/print_dynvars.c" "src/eval/special_host.c"
-   "src/prim/prim.c" "src/prim/install.c" "src/prim/install_stdlib.c"
-   "src/prim/numeric.c" "src/prim/numeric_math.c"
-   "src/prim/numeric_bit.c" "src/prim/numeric_coerce.c"
-   "src/prim/collections.c" "src/prim/collections_transient.c"
-   "src/prim/bits.c"
-   "src/prim/sequences.c" "src/prim/sequences_seq.c"
-   "src/prim/lazy.c"
-   "src/prim/string.c" "src/prim/io.c"
-   "src/prim/reflection.c" "src/prim/meta.c" "src/prim/regex.c"
-   "src/prim/stateful.c" "src/prim/stateful_bindings.c" "src/prim/stm.c" "src/prim/agent.c" "src/prim/store.c" "src/prim/module.c"
-   "src/prim/image.c"
-   "src/prim/ns.c"
-   "src/prim/fs.c" "src/prim/proc.c"
-   "src/prim/host.c" "src/prim/jvm_statics.c" "src/interop/syntax.c"
-   "src/collections/clone.c" "src/regex/re_compile.c" "src/regex/re_match.c" "src/collections/transient.c"
-   "src/async/scheduler.c" "src/async/timer.c" "src/async/chan.c"
-   "src/prim/async.c"
-   "src/prim/bignum.c" "src/prim/ratio.c" "src/prim/bigdec.c"
-   "src/vendor/imath/imath.c"])
+;; sources compiled from source. mino doesn't produce a libmino.a, so
+;; the harness shares mino's compile units by building every TU
+;; alongside the probes. The source list and include set come from
+;; mino/Makefile's SRCS glob and INCDIRS (see mino-src-globs /
+;; mino-incdirs / list-mino-srcs below), so the harness tracks the
+;; submodule's C-tree layout instead of drifting behind a hand-listed
+;; set.
 
 (defn- src->obj [src]
   (str (subs src 0 (- (count src) 2)) ".o"))
@@ -209,52 +152,67 @@
                     :cov   ["-fprofile-instr-generate" "-fcoverage-mapping"
                             "-g" "-O1"]
                     ["-O2"])
-        ;; The :release variant links against mino's prebuilt .o files
-        ;; (fast incremental). Sanitizer and :cov variants recompile
-        ;; mino sources alongside the harness so their flags reach
-        ;; every TU; for :cov that means mino itself is instrumented
-        ;; and the report covers the runtime, not just the harness.
-        ;; mino's own build doesn't keep per-variant .o files (it
-        ;; produces mino_asan / mino_ubsan / mino_tsan as single-cc
-        ;; binaries), so this is the cleanest way to share the runtime
-        ;; under a non-default build.
-        compile-mino-from-source? (boolean (#{:asan :tsan :ubsan :cov} variant))
-        mino-objs (mapv #(str mino-root "/" (src->obj %)) mino-lib-srcs)
-        mino-srcs (mapv #(str mino-root "/" %) mino-lib-srcs)
-        mino-pieces (if compile-mino-from-source? mino-srcs mino-objs)
-        first-piece (first mino-pieces)
+        ;; Every variant compiles mino's runtime from source alongside
+        ;; the harness so the harness shares mino's exact compile units
+        ;; and any API drift surfaces here as a build break. The source
+        ;; list and include set are gathered from mino/Makefile's SRCS
+        ;; glob and INCDIRS (via list-mino-srcs / mino-incdirs) rather
+        ;; than a hand-listed set, so the C-tree layout stays in sync
+        ;; with the submodule as it is reorganized. src/cli/main.c is
+        ;; excluded: the harness supplies main() from driver.c.
+        mino-srcs (->> (list-mino-srcs mino-root)
+                       (remove #(= % "src/cli/main.c"))
+                       (mapv #(str mino-root "/" %)))
+        first-piece (first mino-srcs)
         flags     (concat ["-std=c99" "-Wall" "-Wno-extra-semi"
                            "-DMINO_CPJIT=1"]
                           sanitize)
         harness-c (map #(str root "/" %) harness-libs)
         embeds-c  (map #(str root "/" %) embed-probe-srcs)
         argv      (concat [cc] flags
-                          (map #(str "-I" mino-root "/" %)
-                               ["src" "src/public" "src/runtime"
-                                "src/gc" "src/eval" "src/values"
-                                "src/collections" "src/prim" "src/async"
-                                "src/interop" "src/diag"
-                                "src/vendor/imath"])
+                          (mapv #(str "-I" mino-root "/" %) mino-incdirs)
                           ["-I" (str root "/tests/adv")]
                           harness-c embeds-c
-                          mino-pieces
+                          mino-srcs
                           ["-lm" "-lpthread" "-o" out])]
     (println "  cc:        " cc)
     (println "  variant:   " (name (or variant :release)))
+    (println "  sources:   " (count mino-srcs) "mino TUs")
     (println "  out:       " out)
     (sh! "mkdir" "-p" out-dir)
-    (if (or compile-mino-from-source? (file-exists? first-piece))
+    (if (nil? first-piece)
+      (do
+        (println "  ERROR: no mino sources found under" mino-root)
+        1)
       (try
         (println (apply sh! argv))
         (println "  built:" out)
         0
         (catch e
           (println "  build failed:" (str e))
-          1))
-      (do
-        (println "  SKIP: mino .o files not present at" first-piece)
-        (println "  (run `cd " mino-root " && make` first)")
-        1))))
+          1)))))
+
+(defn run-embed-harness
+  "Build the default (release) C-side probe binary and run the whole
+   registry once at a fixed seed. Non-sanitizer: a plain build+run, so
+   it is safe on hosts where an ASan-instrumented runtime livelocks at
+   startup. Optional filter restricts probes by name substring (the
+   driver's --filter). Returns 0 only when the build succeeds and every
+   dispatched probe passes (driver exit 0)."
+  ([] (run-embed-harness nil))
+  ([filter]
+   (let [root     (repo-root)
+         build-rc (build-harness :release)
+         bin      (str root "/tests/adv/build/adv_test_release")]
+     (if (or (not (zero? build-rc)) (not (file-exists? bin)))
+       (do (println "  harness build failed") 1)
+       (let [argv (cond-> [bin "--seed" "0"]
+                    filter (concat ["--filter" filter]))
+             out  (try (apply sh argv)
+                       (catch e {:exit 1 :out (str e)}))]
+         (println (:out out))
+         (println "  exit:" (:exit out))
+         (if (zero? (:exit out)) 0 1))))))
 
 (defn- detect-tool
   "Resolve a clang tool. Prefers a PATH hit (/usr/bin/clang is the

@@ -50,6 +50,10 @@
   (println "[mino-tests] adv-test-sanitizers (ASan / UBSan / TSan)")
   (impl/sanitizer-trinity))
 
+(defn adv-test-embed [& _]
+  (println "[mino-tests] adv-test-embed (C-side probe registry, release, seed=0)")
+  (impl/run-embed-harness))
+
 (defn build-cov [& _]
   (println "[mino-tests] build-cov")
   (impl/build-cov-binary))

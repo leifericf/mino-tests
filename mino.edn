@@ -25,6 +25,8 @@
                      :task mino-tests.tasks/adv-test-coverage}
   adv-test-sanitizers {:doc "Triple sanitizer pass: ASan + UBSan + TSan"
                        :task mino-tests.tasks/adv-test-sanitizers}
+  adv-test-embed    {:doc  "Build+run the C-side probe registry once (release, no sanitizer)"
+                     :task mino-tests.tasks/adv-test-embed}
   build-cov         {:doc  "Build mino_cov instrumented binary"
                      :task mino-tests.tasks/build-cov}
   mutation-doctor   {:doc  "Assert the matched llvm@19 clang / mull@19 LLVM major agree"

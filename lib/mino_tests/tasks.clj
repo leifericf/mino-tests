@@ -59,6 +59,11 @@
   (impl/mutation-doctor)
   0)
 
+(defn mutation-build [& args]
+  (let [dir (or (first args) "src/read")]
+    (println "[mino-tests] mutation-build (mino_mut with mutants in" dir ")")
+    (impl/mutation-build dir)))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

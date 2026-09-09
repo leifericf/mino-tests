@@ -11,6 +11,7 @@
 *.profraw
 *.profdata
 tests/adv/build/
+tests/mutation/build/
 tests/adv/coverage/report.html
 tests/adv/coverage/*.html
 tests/adv/coverage/snapshots/*.tmp

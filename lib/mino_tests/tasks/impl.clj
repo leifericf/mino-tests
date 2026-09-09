@@ -364,6 +364,123 @@
       (println "  mutation-doctor: matched pair OK (LLVM" cmaj ")")
       cmaj)))
 
+;; ---- Mutation lane: mino_mut build --------------------------------
+;;
+;; mino's own build is a single `cc $(SRCS)` shot; it keeps no per-TU
+;; .o files. The mutation lane needs the critical dir's TUs carrying
+;; Mull's embedded mutants while the rest of the runtime stays clean,
+;; so it compiles every TU to a .o (the critical dir's through the pass
+;; plugin) and links `mino_mut`. Mull mutates post-preprocessing IR, so
+;; the flag set MUST match mino's shipped build exactly (minus warning
+;; flags, which have no IR effect); a divergent -D set would mutate a
+;; program mino never ships.
+
+;; The mino Makefile globs its SRCS from these directories (kept in
+;; sync with mino/Makefile's SRCS wildcard). mino has no dir-walk
+;; primitive, so the source list is gathered by shelling `find` inside
+;; the submodule rather than hand-listing every TU (which drifts).
+(def ^:private mino-src-globs
+  ["src/eval/*.c" "src/eval/bc/*.c" "src/eval/bc/jit/*.c"
+   "src/read/*.c" "src/print/*.c" "src/diag/*.c"
+   "src/names/*.c" "src/state/*.c" "src/gc/*.c" "src/public/*.c"
+   "src/values/*.c" "src/collections/*.c" "src/prim/*/*.c"
+   "src/interop/*.c" "src/regex/*.c" "src/async/*.c"
+   "src/vendor/imath/*.c" "src/vendor/bearssl/*.c"
+   "src/vendor/miniz/*.c" "src/cli/*.c"])
+
+;; The exact include set from mino/Makefile's INCDIRS, relative to the
+;; mino source root. Kept in sync with that Makefile.
+(def ^:private mino-incdirs
+  ["src" "src/generated" "src/public" "src/runtime" "src/gc" "src/eval"
+   "src/read" "src/print" "src/names" "src/state"
+   "src/values" "src/collections" "src/prim" "src/async"
+   "src/interop" "src/diag" "src/vendor/imath"
+   "src/vendor/bearssl" "src/vendor/bearssl/inc"
+   "src/vendor/miniz" "src/vendor/miniz/upstream"])
+
+;; The IR-determining flag set. Matches mino/Makefile CFLAGS exactly
+;; except for the warning flags (-Wall -Wpedantic -Wextra -Werror and
+;; the -Wno-* mutes), which have no effect on emitted IR and would only
+;; turn a warning into a build failure under a different clang.
+(def ^:private mino-mut-cflags
+  ["-std=c99" "-O2" "-fno-strict-aliasing" "-DMINO_CPJIT=1"])
+
+(defn- list-mino-srcs
+  "Enumerate mino's SRCS by shelling `ls` over the Makefile's globs
+   inside the submodule. Returns paths relative to the mino source
+   root (e.g. src/read/read.c)."
+  [mino-root]
+  (let [pat (str/join " " mino-src-globs)
+        r   (sh "sh" "-c" (str "cd " mino-root " && ls -1 " pat " 2>/dev/null"))]
+    (->> (str/split-lines (or (:out r) ""))
+         (map str/trim)
+         (remove str/blank?)
+         vec)))
+
+(defn mutation-build
+  "Compile mino into `mino_mut` with the critical dir's TUs carrying
+   Mull mutants. `dir` is a path prefix relative to the mino source
+   root (default \"src/read\") -- only TUs under it are compiled
+   through the pass plugin; every other TU is compiled normally. Links
+   with -lm -lpthread. Returns 0 on success, 1 on failure."
+  ([] (mutation-build "src/read"))
+  ([dir]
+   (mutation-doctor)
+   (let [root      (repo-root)
+         mino-root (mino-src-root)
+         clang     (mut-clang)
+         frontend  (mull-ir-frontend)
+         out-dir   (str root "/tests/mutation/build")
+         obj-dir   (str out-dir "/obj")
+         out       (str out-dir "/mino_mut")
+         incflags  (mapv #(str "-I" mino-root "/" %) mino-incdirs)
+         srcs      (list-mino-srcs mino-root)]
+     (println "  clang:   " clang)
+     (println "  path dir:" dir)
+     (println "  sources: " (count srcs) "TUs")
+     (println "  out:     " out)
+     (if (empty? srcs)
+       (do (println "  ERROR: no mino sources found under" mino-root)
+           1)
+       (do
+         (sh! "mkdir" "-p" obj-dir)
+         (let [mutated (atom [])
+               objs
+               (mapv
+                (fn [src]
+                  (let [mutate? (str/starts-with? src (str dir "/"))
+                        obj     (str obj-dir "/"
+                                     (str/replace (src->obj src) "/" "__"))
+                        base    (concat [clang] mino-mut-cflags incflags)
+                        argv    (concat base
+                                        (when mutate?
+                                          ["-g" "-grecord-command-line"
+                                           (str "-fpass-plugin=" frontend)])
+                                        ["-c" (str mino-root "/" src)
+                                         "-o" obj])]
+                    (when mutate?
+                      (swap! mutated conj src)
+                      (println "  [mutate]" src))
+                    (try
+                      (apply sh! argv)
+                      obj
+                      (catch e
+                        (println "  compile failed:" src)
+                        (println "   " (str e))
+                        (throw (ex-info (str "compile failed: " src)
+                                        {:src src}))))))
+                srcs)]
+           (println "  mutated" (count @mutated) "TUs:" (pr-str @mutated))
+           (println "  linking" out "...")
+           (try
+             (apply sh! (concat [clang] objs
+                                ["-lm" "-lpthread" "-o" out]))
+             (println "  built:" out)
+             0
+             (catch e
+               (println "  link failed:" (str e))
+               1))))))))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

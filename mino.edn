@@ -29,6 +29,8 @@
                      :task mino-tests.tasks/build-cov}
   mutation-doctor   {:doc  "Assert the matched llvm@19 clang / mull@19 LLVM major agree"
                      :task mino-tests.tasks/mutation-doctor}
+  mutation-build    {:doc  "Compile mino_mut with Mull mutants in a critical dir (default src/read)"
+                     :task mino-tests.tasks/mutation-build}
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"

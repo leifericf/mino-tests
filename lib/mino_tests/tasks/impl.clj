@@ -481,6 +481,127 @@
                (println "  link failed:" (str e))
                1))))))))
 
+;; ---- Mutation lane: run + score -----------------------------------
+;;
+;; `mutation <dir>` runs mull-runner over mino_mut using the dir's
+;; kill-signal command as the test oracle (Mull reads its exit code),
+;; then scores the IDE reporter output into an EDN survivor summary --
+;; the same shape/spirit as cov-summary's coverage EDN. Mutants live
+;; only in the TUs mutation-build compiled through the pass plugin, so
+;; the score is scoped to that dir without a runner-side path filter.
+
+;; Per-dir kill-signal oracle registry. Each value is an argv vector
+;; (relative to repo root, mino_mut prepended by the runner call) that
+;; exercises the dir's invariants and exits non-zero on any mismatch.
+;; The reader subset (populated in the reader-wiring commit) points at
+;; a curated mino script under tests/mutation/oracles/.
+(defn- kill-signal-argv
+  "Return the oracle argv for a critical dir, or nil if unregistered."
+  [dir]
+  (let [root (repo-root)]
+    (get {"src/read" [(str root "/tests/mutation/oracles/read_kill.clj")]}
+         dir)))
+
+(defn parse-mutation-report
+  "Parse mull-runner IDE reporter text into a scored summary map.
+   The summary line is `[info] Survived mutants (S/T):` and each
+   survivor is a `<file>:<line>:<col>: warning: Survived: <desc>
+   [<operator>]` line. Returns nil if no summary line is present
+   (a 100%-killed run prints no survivor block)."
+  [text]
+  (let [lines   (str/split-lines (or text ""))
+        surv-re #"Survived mutants \((\d+)/(\d+)\)"
+        summary (some #(re-find surv-re %) lines)
+        ;; A survivor detail line carries the operator tag in brackets.
+        det-re  #"^(.+?):(\d+):(\d+): warning: Survived: (.+) \[([a-z0-9_]+)\]$"
+        survivors
+        (->> lines
+             (keep (fn [l]
+                     (when-let [m (re-find det-re (str/trim l))]
+                       {:file (nth m 1)
+                        :line (long (read-string (nth m 2)))
+                        :col  (long (read-string (nth m 3)))
+                        :desc (nth m 4)
+                        :operator (nth m 5)})))
+             vec)]
+    (if summary
+      (let [survived (long (read-string (nth summary 1)))
+            total    (long (read-string (nth summary 2)))
+            killed   (- total survived)]
+        {:total total
+         :killed killed
+         :survived survived
+         :score (if (pos? total) (/ (double killed) total) 1.0)
+         :by-operator (->> survivors
+                           (group-by :operator)
+                           (map (fn [[k v]] [k (count v)]))
+                           (into (sorted-map)))
+         :survivors survivors})
+      ;; No survivor block: either a clean 100% run or a total we can
+      ;; still recover from the "Mutation score" line if present.
+      (when (some #(str/includes? % "All mutations have been killed") lines)
+        {:total nil :killed nil :survived 0 :score 1.0
+         :by-operator (sorted-map) :survivors []}))))
+
+(defn mutation
+  "Run mull-runner over mino_mut with `dir`'s kill-signal oracle and
+   emit a scored survivor summary as EDN under
+   tests/mutation/reports/<dir-tag>.edn. Assumes `mutation-build`
+   already produced mino_mut for the same dir. Returns 0 on a
+   completed run (a low score is a finding, not a task failure)."
+  ([] (mutation "src/read"))
+  ([dir]
+   (mutation-doctor)
+   (let [root    (repo-root)
+         runner  (mull-runner)
+         binp    (str root "/tests/mutation/build/mino_mut")
+         oracle  (kill-signal-argv dir)
+         dir-tag (str/replace dir "/" "_")
+         rpt-dir (str root "/tests/mutation/reports")
+         raw     (str rpt-dir "/" dir-tag ".ide.txt")
+         edn     (str rpt-dir "/" dir-tag ".edn")]
+     (cond
+       (not (file-exists? binp))
+       (do (println "  ERROR: mino_mut not built; run mutation-build" dir "first")
+           1)
+
+       (nil? oracle)
+       (do (println "  ERROR: no kill-signal oracle registered for" dir)
+           1)
+
+       :else
+       (do
+         (sh! "mkdir" "-p" rpt-dir)
+         (println "  runner: " runner)
+         (println "  binary: " binp)
+         (println "  oracle: " (str/join " " oracle))
+         ;; Route the full IDE output to a file: the survivor block can
+         ;; run to hundreds of lines, past sh's captured-output limit.
+         (let [argv (concat [runner "--reporters" "IDE"
+                             "--ide-reporter-show-killed" binp]
+                            oracle)
+               cmd  (str (str/join " " (map pr-str argv)) " > "
+                         (pr-str raw) " 2>&1")
+               _    (println "  running mull-runner (this takes a while)...")
+               r    (sh "sh" "-c" cmd)
+               out  (try (slurp raw) (catch e ""))
+               summary (parse-mutation-report out)]
+           (if (nil? summary)
+             (do (println "  ERROR: could not parse mull-runner output; see" raw)
+                 1)
+             (do
+               (spit edn (with-out-str (println (pr-str summary))))
+               (println "  --- mutation summary (" dir ") ---")
+               (println "  total:   " (:total summary))
+               (println "  killed:  " (:killed summary))
+               (println "  survived:" (:survived summary))
+               (when (:total summary)
+                 (println "  score:   "
+                          (format "%.1f%%" (* 100.0 (:score summary)))))
+               (println "  by-operator:" (pr-str (:by-operator summary)))
+               (println "  report:  " edn)
+               0))))))))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

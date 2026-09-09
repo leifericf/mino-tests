@@ -64,6 +64,11 @@
     (println "[mino-tests] mutation-build (mino_mut with mutants in" dir ")")
     (impl/mutation-build dir)))
 
+(defn mutation [& args]
+  (let [dir (or (first args) "src/read")]
+    (println "[mino-tests] mutation (score" dir "via mull-runner kill-signal)")
+    (impl/mutation dir)))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

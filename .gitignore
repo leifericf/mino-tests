@@ -12,6 +12,8 @@
 *.profdata
 tests/adv/build/
 tests/mutation/build/
+# Raw mull IDE dumps are regenerated; the scored .edn report is tracked.
+tests/mutation/reports/*.ide.txt
 tests/adv/coverage/report.html
 tests/adv/coverage/*.html
 tests/adv/coverage/snapshots/*.tmp

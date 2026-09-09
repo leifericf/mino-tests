@@ -1,6 +1,42 @@
 # Changelog
 
-## Unreleased — zip/gzip binary-level E2E; JVM-Clojure ground truth
+## Unreleased — mutation-testing lane; zip/gzip binary-level E2E; JVM-Clojure ground truth
+
+New Mull-based mutation-testing lane over the four must-never-fail
+code areas of the pinned mino submodule: `src/read` (the untrusted-
+input frontier), `src/values` (the value core), `src/eval/bc` (the
+VM/JIT), and `src/gc` (the write barrier and collector). The lane is
+a thin task surface — `mutation-doctor`, `mutation-build`,
+`mutation`, `mutation-all`, and the `check-mutation` gate — over
+`lib/mino_tests/tasks/impl.clj`. It compiles a `mino_mut` binary that
+carries Mull's IR-level mutants in one critical dir at a time (built
+with mino's exact shipped flag set so the mutants describe the real
+program, not a phantom config), then scores each dir with a scoped
+fast kill-signal oracle: the reader lane runs a reader-test subset,
+the vm/bc lane runs under `--jit=off`/`--jit=on` parity, and the gc
+lane uses BOUNDED out-of-process verify repros (never the full suite
+under `MINO_GC_VERIFY=1`, which would exhaust a host). The toolchain
+is a matched pin — `llvm@19` clang plus `mull@19` — resolved by
+absolute path and version-asserted by `mutation-doctor`, because
+Mull's pass plugin ABI is LLVM-major-locked. `docker/mutation.Dockerfile`
+is the reproducible CI home (LLVM 19 via apt.llvm.org, mull-19 via
+its Cloudsmith apt repo, self-verifying the matched pair at build);
+a new `ci-mutation.yml` runs the reader lane nightly (schedule +
+workflow_dispatch only, so on-push CI is untouched), following the
+gc-fuzz allowed-to-fail precedent for the heavy run.
+
+HONEST FRAMING (the weak-yield finding, recorded plainly): this is
+promoted as an experiment, not a high-score gate. Trivial Compiler
+Equivalence proved only 0.6% of survivors (12 of ~2000) are
+compiler-equivalent; the survivor set is dominated by `:oracle-gap`
+(behaviour-changing mutants the scoped fast oracles do not drive but
+the full suite does), NOT equivalent-mutant noise. Only 9 genuine
+test gaps surfaced across all four lanes (gc and `read_numeric` at
+zero — the full suite already covers them). The payoff is therefore
+the `check-mutation` regression gate plus that 9-gap shortlist, not a
+mutation score. `tests/mutation/baseline.edn` records the accepted
+survivor set, and `check-mutation` gates ONLY on a NEW survivor
+absent from the baseline — never on a raw survivor count.
 
 New `zip-e2e` task (compression-zip campaign p6t2): rebuilds the
 campaign's frozen write-golden archive (default and forced-zip64

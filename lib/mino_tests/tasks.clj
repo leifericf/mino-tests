@@ -69,6 +69,18 @@
     (println "[mino-tests] mutation (score" dir "via mull-runner kill-signal)")
     (impl/mutation dir)))
 
+;; Per-dir entry points. mino's task runner forwards no CLI args to a
+;; task fn, so each ranked dir gets its own zero-arg build/score pair
+;; rather than relying on `mutation <dir>` positional args.
+
+(defn mutation-build-values [& _]
+  (println "[mino-tests] mutation-build-values (mino_mut with mutants in src/values)")
+  (impl/mutation-build "src/values"))
+
+(defn mutation-values [& _]
+  (println "[mino-tests] mutation-values (score src/values via value-core kill-signal)")
+  (impl/mutation "src/values"))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

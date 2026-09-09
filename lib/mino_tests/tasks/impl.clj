@@ -499,7 +499,8 @@
   "Return the oracle argv for a critical dir, or nil if unregistered."
   [dir]
   (let [root (repo-root)]
-    (get {"src/read" [(str root "/tests/mutation/oracles/read_kill.clj")]}
+    (get {"src/read"    [(str root "/tests/mutation/oracles/read_kill.clj")]
+          "src/values"  [(str root "/tests/mutation/oracles/values_kill.clj")]}
          dir)))
 
 (defn parse-mutation-report
@@ -543,6 +544,37 @@
         {:total nil :killed nil :survived 0 :score 1.0
          :by-operator (sorted-map) :survivors []}))))
 
+(defn- run-mull-once
+  "Run mull-runner over mino_mut once with `oracle` as the test command,
+   under the given env-pairs, capturing the IDE report to `raw`. Returns
+   the parsed summary map (or nil if unparseable)."
+  [runner binp mino-root oracle env-pairs raw]
+  (let [env-str (apply str (interpose " "
+                             (map (fn [[k v]] (str k "=" v)) env-pairs)))
+        argv    (concat [runner "--reporters" "IDE"
+                         "--ide-reporter-show-killed"]
+                        [binp] oracle)
+        cmd     (str "cd " (pr-str mino-root) " && "
+                     (when (seq env-pairs) (str env-str " "))
+                     (str/join " " (map pr-str argv)) " > "
+                     (pr-str raw) " 2>&1")]
+    (println "  exec:" cmd)
+    (let [t0 (time-ms)
+          _  (sh "sh" "-c" cmd)
+          dt (- (time-ms) t0)]
+      (println (format "  wall-clock: %.1fs" (/ dt 1000.0)))
+      (parse-mutation-report (try (slurp raw) (catch e ""))))))
+
+(defn- print-summary [dir edn summary]
+  (println "  --- mutation summary (" dir ") ---")
+  (println "  total:   " (:total summary))
+  (println "  killed:  " (:killed summary))
+  (println "  survived:" (:survived summary))
+  (when (:total summary)
+    (println "  score:   " (format "%.1f%%" (* 100.0 (:score summary)))))
+  (println "  by-operator:" (pr-str (:by-operator summary)))
+  (println "  report:  " edn))
+
 (defn mutation
   "Run mull-runner over mino_mut with `dir`'s kill-signal oracle and
    emit a scored survivor summary as EDN under
@@ -559,7 +591,6 @@
          oracle    (kill-signal-argv dir)
          dir-tag   (str/replace dir "/" "_")
          rpt-dir   (str root "/tests/mutation/reports")
-         raw       (str rpt-dir "/" dir-tag ".ide.txt")
          edn       (str rpt-dir "/" dir-tag ".edn")]
      (cond
        (not (file-exists? binp))
@@ -576,34 +607,15 @@
          (println "  runner: " runner)
          (println "  binary: " binp)
          (println "  oracle: " (str/join " " oracle))
-         ;; Route the full IDE output to a file: the survivor block can
-         ;; run to hundreds of lines, past sh's captured-output limit.
-         ;; Run from the mino source root so the oracle's own relative
-         ;; `(require "tests/test")` / test-file loads resolve.
-         (let [argv (concat [runner "--reporters" "IDE"
-                             "--ide-reporter-show-killed" binp]
-                            oracle)
-               cmd  (str "cd " (pr-str mino-root) " && "
-                         (str/join " " (map pr-str argv)) " > "
-                         (pr-str raw) " 2>&1")
-               _    (println "  running mull-runner (this takes a while)...")
-               r    (sh "sh" "-c" cmd)
-               out  (try (slurp raw) (catch e ""))
-               summary (parse-mutation-report out)]
+         (println "  running mull-runner (this takes a while)...")
+         (let [raw (str rpt-dir "/" dir-tag ".ide.txt")
+               summary (run-mull-once runner binp mino-root oracle [] raw)]
            (if (nil? summary)
              (do (println "  ERROR: could not parse mull-runner output; see" raw)
                  1)
              (do
                (spit edn (with-out-str (println (pr-str summary))))
-               (println "  --- mutation summary (" dir ") ---")
-               (println "  total:   " (:total summary))
-               (println "  killed:  " (:killed summary))
-               (println "  survived:" (:survived summary))
-               (when (:total summary)
-                 (println "  score:   "
-                          (format "%.1f%%" (* 100.0 (:score summary)))))
-               (println "  by-operator:" (pr-str (:by-operator summary)))
-               (println "  report:  " edn)
+               (print-summary dir edn summary)
                0))))))))
 
 (defn cov-run

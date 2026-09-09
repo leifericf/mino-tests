@@ -33,6 +33,10 @@
                      :task mino-tests.tasks/mutation-build}
   mutation          {:doc  "Score a critical dir with mull-runner + its kill-signal oracle (default src/read)"
                      :task mino-tests.tasks/mutation}
+  mutation-build-values {:doc "Compile mino_mut with Mull mutants in src/values"
+                         :task mino-tests.tasks/mutation-build-values}
+  mutation-values   {:doc  "Score src/values with the value-core kill-signal"
+                     :task mino-tests.tasks/mutation-values}
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"

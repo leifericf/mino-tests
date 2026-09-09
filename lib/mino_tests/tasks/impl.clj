@@ -417,12 +417,41 @@
          (remove str/blank?)
          vec)))
 
+;; Per-lane instrument allow-list. When a lane names an explicit TU
+;; subset, ONLY those exact TUs carry mutants (a scoped subset of the
+;; prefix). Rationale + logged sampling for the vm/bc lane:
+;;
+;; The full bc tree (JIT emitter, patcher, region allocator, stats)
+;; yields ~2800 covered mutants per mode; vm.c alone is ~1900. Worse,
+;; vm.c is the interpreter dispatch loop, so a large fraction of its
+;; relational/arithmetic mutants break loop TERMINATION -- each such
+;; mutant runs until the per-mutant timeout, and under jit=off/on parity
+;; that tail is paid twice. Measured on this host the vm.c+compile.c
+;; parity run does not converge inside any reasonable window (hours).
+;;
+;; The committed vm/bc score is therefore scoped to compile.c -- the
+;; bytecode compiler's integer-overflow->bignum promotion guards and
+;; clause/arity match, which the plan names and which carry no
+;; interpreter-loop hangs. vm.c's operand/stack/safepoint mutants stay
+;; in scope for a DEDICATED nightly window (set MINO_MUT_VMBC_TUS to
+;; "src/eval/bc/vm.c,src/eval/bc/compile.c" and budget hours); they are
+;; NOT silently dropped -- the report records the scope. jit_parity_test
+;; and the bc_* oracle files still exercise vm.c behaviourally under
+;; both modes, so a vm.c dispatch bug that changes a result is caught by
+;; the oracle even when vm.c is outside the mutant-instrument scope.
+(def ^:private lane-instrument-tus
+  {"src/eval/bc"
+   (if-let [ov (getenv "MINO_MUT_VMBC_TUS")]
+     (set (map str/trim (str/split ov #",")))
+     #{"src/eval/bc/compile.c"})})
+
 (defn mutation-build
   "Compile mino into `mino_mut` with the critical dir's TUs carrying
    Mull mutants. `dir` is a path prefix relative to the mino source
    root (default \"src/read\") -- only TUs under it are compiled
-   through the pass plugin; every other TU is compiled normally. Links
-   with -lm -lpthread. Returns 0 on success, 1 on failure."
+   through the pass plugin; every other TU is compiled normally. A dir
+   with a lane-instrument-tus allow-list mutates only that exact subset.
+   Links with -lm -lpthread. Returns 0 on success, 1 on failure."
   ([] (mutation-build "src/read"))
   ([dir]
    (mutation-doctor)
@@ -434,9 +463,11 @@
          obj-dir   (str out-dir "/obj")
          out       (str out-dir "/mino_mut")
          incflags  (mapv #(str "-I" mino-root "/" %) mino-incdirs)
+         allow     (get lane-instrument-tus dir)
          srcs      (list-mino-srcs mino-root)]
      (println "  clang:   " clang)
      (println "  path dir:" dir)
+     (when allow (println "  scoped to:" (pr-str allow)))
      (println "  sources: " (count srcs) "TUs")
      (println "  out:     " out)
      (if (empty? srcs)
@@ -448,7 +479,9 @@
                objs
                (mapv
                 (fn [src]
-                  (let [mutate? (str/starts-with? src (str dir "/"))
+                  (let [mutate? (if allow
+                                  (contains? allow src)
+                                  (str/starts-with? src (str dir "/")))
                         obj     (str obj-dir "/"
                                      (str/replace (src->obj src) "/" "__"))
                         base    (concat [clang] mino-mut-cflags incflags)
@@ -500,8 +533,16 @@
   [dir]
   (let [root (repo-root)]
     (get {"src/read"    [(str root "/tests/mutation/oracles/read_kill.clj")]
-          "src/values"  [(str root "/tests/mutation/oracles/values_kill.clj")]}
+          "src/values"  [(str root "/tests/mutation/oracles/values_kill.clj")]
+          "src/eval/bc" [(str root "/tests/mutation/oracles/vmbc_kill.clj")]}
          dir)))
+
+;; Dirs whose kill-signal must run under BOTH the interpreter and the
+;; JIT. A vm/bc mutant is KILLED if it dies under either mode, so the
+;; `mutation` task unions the two runs' killed sets and only a mutant
+;; that survives BOTH is a genuine survivor. MINO_JIT toggles the mode;
+;; mino_mut is built -DMINO_CPJIT=1 so both paths are live.
+(def ^:private jit-parity-dirs #{"src/eval/bc"})
 
 (defn parse-mutation-report
   "Parse mull-runner IDE reporter text into a scored summary map.
@@ -544,15 +585,36 @@
         {:total nil :killed nil :survived 0 :score 1.0
          :by-operator (sorted-map) :survivors []}))))
 
+(defn- mull-workers
+  "Optional --workers count for mull-runner. MINO_MULL_WORKERS bounds
+   the per-mutant fan-out so a doubled-cost parity dir stays within the
+   nightly budget. Returns [\"--workers\" \"N\"] or an empty vector."
+  []
+  (if-let [w (getenv "MINO_MULL_WORKERS")]
+    ["--workers" (str/trim w)]
+    []))
+
 (defn- run-mull-once
   "Run mull-runner over mino_mut once with `oracle` as the test command,
    under the given env-pairs, capturing the IDE report to `raw`. Returns
    the parsed summary map (or nil if unparseable)."
   [runner binp mino-root oracle env-pairs raw]
-  (let [env-str (apply str (interpose " "
+  (let [;; MINO_MUT_BIN lets a subprocess-style oracle re-invoke the
+        ;; SAME mutated binary for its per-file children (the vm/bc
+        ;; oracle needs this; single-load oracles ignore it).
+        env-pairs (concat env-pairs [["MINO_MUT_BIN" binp]])
+        env-str (apply str (interpose " "
                              (map (fn [[k v]] (str k "=" v)) env-pairs)))
+        ;; The vm/bc oracle spawns 14 children, so its baseline runs a
+        ;; few seconds; mull's warmup timeout must clear that. --timeout
+        ;; sets a generous ceiling (per-mutant is still bounded by
+        ;; max(baseline*10, this)). MINO_MULL_TIMEOUT overrides.
+        timeout (or (some-> (getenv "MINO_MULL_TIMEOUT") str/trim)
+                    "60000")
         argv    (concat [runner "--reporters" "IDE"
-                         "--ide-reporter-show-killed"]
+                         "--ide-reporter-show-killed"
+                         "--timeout" timeout]
+                        (mull-workers)
                         [binp] oracle)
         cmd     (str "cd " (pr-str mino-root) " && "
                      (when (seq env-pairs) (str env-str " "))
@@ -564,6 +626,32 @@
           dt (- (time-ms) t0)]
       (println (format "  wall-clock: %.1fs" (/ dt 1000.0)))
       (parse-mutation-report (try (slurp raw) (catch e ""))))))
+
+(defn- survivor-key [s]
+  ;; A mutant is identified by its site + operator; parity unions on this.
+  [(:file s) (:line s) (:col s) (:operator s)])
+
+(defn- union-parity
+  "Union two mode summaries into one: a mutant survives the dir only if
+   it survives BOTH modes. Killed-under-either => killed. Recomputes the
+   score over the intersection of survivor sets. The totals differ only
+   if coverage differs between modes, so the larger total is authoritative."
+  [a b]
+  (let [sa (set (map survivor-key (:survivors a)))
+        sb (set (map survivor-key (:survivors b)))
+        both (into #{} (filter sa sb))
+        survivors (filterv #(both (survivor-key %)) (:survivors a))
+        total (max (or (:total a) 0) (or (:total b) 0))
+        survived (count survivors)
+        killed (- total survived)]
+    {:total total
+     :killed killed
+     :survived survived
+     :score (if (pos? total) (/ (double killed) total) 1.0)
+     :by-operator (->> survivors (group-by :operator)
+                       (map (fn [[k v]] [k (count v)]))
+                       (into (sorted-map)))
+     :survivors survivors}))
 
 (defn- print-summary [dir edn summary]
   (println "  --- mutation summary (" dir ") ---")
@@ -580,7 +668,11 @@
    emit a scored survivor summary as EDN under
    tests/mutation/reports/<dir-tag>.edn. Assumes `mutation-build`
    already produced mino_mut for the same dir. Returns 0 on a
-   completed run (a low score is a finding, not a task failure)."
+   completed run (a low score is a finding, not a task failure).
+
+   For a jit-parity dir (src/eval/bc) the oracle runs twice, once under
+   MINO_JIT=off and once under MINO_JIT=on; the reported survivors are
+   those that survived BOTH modes."
   ([] (mutation "src/read"))
   ([dir]
    (mutation-doctor)
@@ -607,16 +699,53 @@
          (println "  runner: " runner)
          (println "  binary: " binp)
          (println "  oracle: " (str/join " " oracle))
+         (when (seq (mull-workers))
+           (println "  workers:" (second (mull-workers))))
          (println "  running mull-runner (this takes a while)...")
-         (let [raw (str rpt-dir "/" dir-tag ".ide.txt")
-               summary (run-mull-once runner binp mino-root oracle [] raw)]
-           (if (nil? summary)
-             (do (println "  ERROR: could not parse mull-runner output; see" raw)
-                 1)
-             (do
-               (spit edn (with-out-str (println (pr-str summary))))
-               (print-summary dir edn summary)
-               0))))))))
+         (if (jit-parity-dirs dir)
+           ;; Parity: two modes, union the survivor sets. A mutant is a
+           ;; genuine survivor only if it survives BOTH interpreter and JIT.
+           (let [raw-off (str rpt-dir "/" dir-tag ".jitoff.ide.txt")
+                 raw-on  (str rpt-dir "/" dir-tag ".jiton.ide.txt")
+                 _   (println "  --- mode: MINO_JIT=off ---")
+                 s-off (run-mull-once runner binp mino-root oracle
+                                      [["MINO_JIT" "off"]] raw-off)
+                 _   (println "  --- mode: MINO_JIT=on ---")
+                 s-on (run-mull-once runner binp mino-root oracle
+                                     [["MINO_JIT" "on"]] raw-on)]
+             (cond
+               (nil? s-off)
+               (do (println "  ERROR: could not parse jit=off output; see" raw-off) 1)
+               (nil? s-on)
+               (do (println "  ERROR: could not parse jit=on output; see" raw-on) 1)
+               :else
+               (let [summary (assoc (union-parity s-off s-on)
+                                    :jit-parity true
+                                    :jit-off-survived (:survived s-off)
+                                    :jit-on-survived (:survived s-on)
+                                    :instrument-scope
+                                    (vec (sort (get lane-instrument-tus dir)))
+                                    :sampled-out
+                                    ["tests/tco_test.clj"
+                                     "tests/bc_tail_multiarity_test.clj"])]
+                 (spit edn (with-out-str (println (pr-str summary))))
+                 (println "  jit=off survived:" (:survived s-off)
+                          " jit=on survived:" (:survived s-on)
+                          " both:" (:survived summary))
+                 (println "  sampled-out (stress depth, logged):"
+                          (pr-str (:sampled-out summary)))
+                 (print-summary dir edn summary)
+                 0)))
+           ;; Single mode.
+           (let [raw (str rpt-dir "/" dir-tag ".ide.txt")
+                 summary (run-mull-once runner binp mino-root oracle [] raw)]
+             (if (nil? summary)
+               (do (println "  ERROR: could not parse mull-runner output; see" raw)
+                   1)
+               (do
+                 (spit edn (with-out-str (println (pr-str summary))))
+                 (print-summary dir edn summary)
+                 0)))))))))
 
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge

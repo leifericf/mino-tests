@@ -81,6 +81,14 @@
   (println "[mino-tests] mutation-values (score src/values via value-core kill-signal)")
   (impl/mutation "src/values"))
 
+(defn mutation-build-vmbc [& _]
+  (println "[mino-tests] mutation-build-vmbc (mino_mut with mutants in src/eval/bc)")
+  (impl/mutation-build "src/eval/bc"))
+
+(defn mutation-vmbc [& _]
+  (println "[mino-tests] mutation-vmbc (score src/eval/bc under jit=off/on parity)")
+  (impl/mutation "src/eval/bc"))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

@@ -37,6 +37,10 @@
                          :task mino-tests.tasks/mutation-build-values}
   mutation-values   {:doc  "Score src/values with the value-core kill-signal"
                      :task mino-tests.tasks/mutation-values}
+  mutation-build-vmbc {:doc "Compile mino_mut with Mull mutants in src/eval/bc"
+                       :task mino-tests.tasks/mutation-build-vmbc}
+  mutation-vmbc     {:doc  "Score src/eval/bc under jit=off/on parity kill-signal"
+                     :task mino-tests.tasks/mutation-vmbc}
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"

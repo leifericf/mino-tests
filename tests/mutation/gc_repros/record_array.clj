@@ -9,9 +9,12 @@
 ;; (gc_valarr_set and the record assoc path); a dropped edge here leaves
 ;; a field or element pointing at a YOUNG object outside the remset.
 
+;; Small iteration count: sized to finish in a few seconds on the slow
+;; mull-instrumented binary under verify while still forcing promotion
+;; and a missed-barrier abort. See GUARDRAIL #1.
 (defrecord Pt [x y z])
 
-(dotimes [i 3000]
+(dotimes [i 150]
   (let [p  (->Pt i (inc i) (dec i))
         v  (into [] (map (fn [k] (->Pt k k k)) (range 8)))
         p2 (assoc p :x (get-in v [3 :y]))

@@ -12,9 +12,13 @@
 ;; CLASS A. Confirmed to abort the `h_new->gen == GC_GEN_OLD` -> `!=`
 ;; barrier inversion mutant.
 
+;; Small iteration count: the atom promotes OLD quickly and a missed
+;; barrier on its slot aborts within tens of swaps. Sized to finish in a
+;; few seconds on the slow mull-instrumented binary under verify. See
+;; GUARDRAIL #1.
 (let [a (atom {})
       b (atom [])]
-  (dotimes [i 3000]
+  (dotimes [i 400]
     ;; Fresh YOUNG value into the OLD atom slot each iteration.
     (swap! a assoc (str "k" (mod i 64)) [i (inc i) (dec i)])
     (swap! b (fn [v] (if (> (count v) 48) [i] (conj v [i i])))))

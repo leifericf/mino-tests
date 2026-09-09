@@ -89,6 +89,14 @@
   (println "[mino-tests] mutation-vmbc (score src/eval/bc under jit=off/on parity)")
   (impl/mutation "src/eval/bc"))
 
+(defn mutation-build-gc [& _]
+  (println "[mino-tests] mutation-build-gc (mino_mut with mutants in src/gc)")
+  (impl/mutation-build "src/gc"))
+
+(defn mutation-gc [& _]
+  (println "[mino-tests] mutation-gc (score src/gc via bounded verify repros)")
+  (impl/mutation "src/gc"))
+
 (defn mutation-all [& _]
   (println "[mino-tests] mutation-all (build+score ranked dirs, aggregate summary)")
   (impl/mutation-all))

@@ -443,7 +443,40 @@
   {"src/eval/bc"
    (if-let [ov (getenv "MINO_MUT_VMBC_TUS")]
      (set (map str/trim (str/split ov #",")))
-     #{"src/eval/bc/compile.c"})})
+     #{"src/eval/bc/compile.c"})
+
+   ;; The gc lane's candidate TUs are the barrier + collector units the
+   ;; plan names, whose mutants the bounded verify repros can catch: the
+   ;; write barrier and remembered set (barrier.c), the minor collector
+   ;; and promotion (minor.c), the mark driver (driver.c), the tracer
+   ;; (trace.c), remset ranges (ranges.c), and root scanning (roots.c).
+   ;; All six ARE consumed by mull-ir-frontend (verified: the 6-TU build
+   ;; links clean). major.c and profile.c are excluded: a full-major
+   ;; mutant is exercised only by the repros' occasional majors, and
+   ;; profile.c is pure instrumentation with no invariant the verify
+   ;; repros probe.
+   ;;
+   ;; COST CONTROL (measured, not silent): the full 6-TU set yields ~685
+   ;; covered mutants, and each mutant reruns the bounded-verify oracle
+   ;; (~13 s baseline), so the full run is ~30 min at 4 workers -- well
+   ;; over the ~6 min budget. The committed default SAMPLES to the two
+   ;; TUs whose invariants the verify repros probe most directly:
+   ;; barrier.c (the write barrier / remset -- carries the proven
+   ;; barrier-trigger inversion kill) and minor.c (promotion + the minor
+   ;; collector the repros drive every iteration). The other four TUs are
+   ;; NOT silently dropped: they are recorded in the report's
+   ;; :sampled-out-tus and stay in scope for a dedicated nightly window
+   ;; (set MINO_MUT_GC_TUS to the full comma list and budget ~30 min).
+   "src/gc"
+   (if-let [ov (getenv "MINO_MUT_GC_TUS")]
+     (set (map str/trim (str/split ov #",")))
+     #{"src/gc/barrier.c" "src/gc/minor.c"})})
+
+;; The full gc candidate set, recorded so the sampled default can name
+;; exactly what it left for a dedicated window (no silent truncation).
+(def ^:private gc-full-candidate-tus
+  #{"src/gc/barrier.c" "src/gc/minor.c" "src/gc/driver.c"
+    "src/gc/trace.c" "src/gc/ranges.c" "src/gc/roots.c"})
 
 (defn mutation-build
   "Compile mino into `mino_mut` with the critical dir's TUs carrying
@@ -534,7 +567,8 @@
   (let [root (repo-root)]
     (get {"src/read"    [(str root "/tests/mutation/oracles/read_kill.clj")]
           "src/values"  [(str root "/tests/mutation/oracles/values_kill.clj")]
-          "src/eval/bc" [(str root "/tests/mutation/oracles/vmbc_kill.clj")]}
+          "src/eval/bc" [(str root "/tests/mutation/oracles/vmbc_kill.clj")]
+          "src/gc"      [(str root "/tests/mutation/oracles/gc_kill.clj")]}
          dir)))
 
 ;; Dirs whose kill-signal must run under BOTH the interpreter and the
@@ -661,6 +695,11 @@
   (when (:total summary)
     (println "  score:   " (format "%.1f%%" (* 100.0 (:score summary)))))
   (println "  by-operator:" (pr-str (:by-operator summary)))
+  (when (:instrument-scope summary)
+    (println "  instrument-scope:" (pr-str (:instrument-scope summary))))
+  (when (:sampled-out-tus summary)
+    (println "  sampled-out-tus (dedicated window, logged):"
+             (pr-str (:sampled-out-tus summary))))
   (println "  report:  " edn))
 
 (defn mutation
@@ -738,7 +777,24 @@
                  0)))
            ;; Single mode.
            (let [raw (str rpt-dir "/" dir-tag ".ide.txt")
-                 summary (run-mull-once runner binp mino-root oracle [] raw)]
+                 ;; The gc oracle's repros live in the mino-tests repo but
+                 ;; run with the mino submodule as CWD, so pass an ABSOLUTE
+                 ;; repro dir. MINO_GC_VERIFY / nursery / cap are set by the
+                 ;; oracle on each child, never on the whole suite
+                 ;; (guardrail #1).
+                 env-pairs (if (= dir "src/gc")
+                             [["MINO_GC_REPRO_DIR"
+                               (str root "/tests/mutation/gc_repros")]]
+                             [])
+                 s (run-mull-once runner binp mino-root oracle env-pairs raw)
+                 scope (get lane-instrument-tus dir)
+                 summary (when s
+                           (cond-> (assoc s :instrument-scope
+                                          (vec (sort scope)))
+                             (= dir "src/gc")
+                             (assoc :sampled-out-tus
+                                    (vec (sort (remove scope
+                                                       gc-full-candidate-tus))))))]
              (if (nil? summary)
                (do (println "  ERROR: could not parse mull-runner output; see" raw)
                    1)
@@ -753,22 +809,23 @@
 ;; radius order and prints one aggregate score table. Each dir gets a
 ;; fresh mino_mut (the build reuses one output path), so the dirs run
 ;; strictly sequentially: build dir, score dir, next dir. gc's kill-
-;; signal (bounded out-of-process verify repros) lands in Phase 3, so gc
-;; is listed but marked PENDING and skipped -- no silent omission.
+;; signal is a set of bounded out-of-process verify repros (Phase 3);
+;; the repros run under MINO_GC_VERIFY=1 with a tight nursery and a hard
+;; per-repro wall-clock cap, NEVER the whole suite (guardrail #1).
 
 ;; Blast-radius rank from the plan's "Highest-benefit target areas".
 ;; :ready? gates whether the dir has a registered oracle yet.
 (def ^:private mutation-ranked-dirs
-  [{:dir "src/gc"      :label "gc"     :ready? false}
+  [{:dir "src/gc"      :label "gc"     :ready? true}
    {:dir "src/read"    :label "read"   :ready? true}
    {:dir "src/eval/bc" :label "vm/bc"  :ready? true}
    {:dir "src/values"  :label "values" :ready? true}])
 
 (defn mutation-all
   "Run the ranked critical dirs end to end (build then score each) and
-   print an aggregate score summary. gc is marked PENDING until its
-   Phase 3 verify-repro oracle lands. Returns 0 when every ready dir
-   completed; a low score is a finding, not a failure."
+   print an aggregate score summary. gc runs its bounded verify-repro
+   oracle under guardrail #1 (never the whole suite). Returns 0 when
+   every ready dir completed; a low score is a finding, not a failure."
   []
   (mutation-doctor)
   (let [results

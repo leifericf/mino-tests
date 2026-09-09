@@ -24,12 +24,19 @@
 ;; repro exceeds the oracle's per-repro wall-clock ceiling that is a
 ;; harness bug: shrink the counts, do not raise the ceiling.
 
-(dotimes [i 1000]
+;; Iteration count is deliberately SMALL. A missed barrier surfaces on
+;; the FIRST promoted container that receives a YOUNG child bypassing the
+;; remset -- empirically within tens of iterations, not thousands. The
+;; count is sized so the repro finishes in a few seconds on the SLOW
+;; mull-instrumented binary under verify (the instrumented tracer is
+;; ~30x the shipped binary), while still forcing enough minors with
+;; promotion to abort the barrier-inversion mutant. See GUARDRAIL #1.
+(dotimes [i 150]
   (let [t (transient {})]
     (loop [j 0 t t]
       (if (< j 32)
         ;; Fresh YOUNG vector value each store; the transient container
-        ;; is promoted OLD by a mid-loop minor under the tight nursery.
+        ;; is promoted OLD by a mid-loop minor.
         (recur (inc j) (assoc! t (str "k" j) [j (inc j) (dec j)]))
         (persistent! t))))
   ;; Interleave a transient-vector conj! churn so the barrier is

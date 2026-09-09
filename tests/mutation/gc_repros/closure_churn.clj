@@ -13,7 +13,7 @@
 ;; nursery to promote the accumulator and surface a missed barrier.
 
 (let [acc (atom [])]
-  (dotimes [i 800]
+  (dotimes [i 300]
     (let [f (eval (list 'fn ['x] (list '+ 'x i [i (inc i)])))]
       ;; Store the fresh closure into the OLD accumulator; keep the
       ;; accumulator bounded so it stays live but does not grow forever.

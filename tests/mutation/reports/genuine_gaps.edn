@@ -1,0 +1,40 @@
+;; Ranked genuine-gap shortlist from Phase 4 mutation triage.
+;;
+;; These are survivors a targeted mino regression test could kill and
+;; that guard a real correctness invariant (not defensive-unreachable,
+;; not instrumentation). Each was cross-checked against the actual C
+;; source AND mino's full test corpus, confirming the full suite (not
+;; just the scoped fast oracle) misses them. gen-mutation-baseline reads
+;; the :shortlist keys to mark these :genuine-gap in baseline.edn.
+;;
+;; The decision to WRITE these tests into mino belongs to the maintainer;
+;; this file only records where the real gaps are.
+{:generated-by "Phase 4 mutation triage (source + corpus verified)"
+ :lanes-with-zero-genuine-gaps
+ ["src/gc"          ;; full suite gc_test.clj covers barrier OLD->YOUNG
+                    ;; survival, promotion-age, age-buckets; verify repros
+                    ;; cover remset-complete. Remainder is timing/policy/
+                    ;; accounting/verify-internal.
+  "src/read/read_numeric.c" ;; radix/octal/hex/overflow boundaries already
+                            ;; asserted by literal_test.clj, which the
+                            ;; scoped read oracle itself loads.
+  ]
+ :shortlist
+ [{:rank 1 :file "src/read/read.c" :line 1596 :col 18 :operator "cxx_gt_to_ge"
+   :invariant "Char-octal bound `oval > 0377` rejects codepoints past 255; >= 0377 wrongly rejects the maximal valid \\o377. Corpus has no \\oNNN char literal."}
+  {:rank 2 :file "src/read/read.c" :line 2207 :col 25 :operator "cxx_gt_to_ge"
+   :invariant "#bytes trailing-bit-count validator `val > 7`; >= 7 wrongly rejects the valid /7 suffix. Corpus reads only byte-aligned #bytes (no /N)."}
+  {:rank 3 :file "src/read/read.c" :line 2214 :col 25 :operator "cxx_sub_to_add"
+   :invariant "#bytes hex-payload end `end = k - 1` trims before the '/'; k + 1 folds '/' plus a suffix digit into the hex decode, wrong bytes. /N suffix path untested."}
+  {:rank 4 :file "src/read/read.c" :line 2268 :col 20 :operator "cxx_ne_to_eq"
+   :invariant "#bytes bit-tail stamp guard `bit_tail != 0`; == 0 stamps a bogus tail on byte-aligned and drops it on bit-tailed values. No bit-tailed #bytes in corpus."}
+  {:rank 5 :file "src/values/val.c" :line 1219 :col 41 :operator "cxx_gt_to_le"
+   :invariant "compare(int, out-of-ll BIGINT) sign fallback (positive bigint => int is -1); > to <= inverts (compare 1 1e20N). Corpus compares only fits-in-ll bigints."}
+  {:rank 6 :file "src/values/val.c" :line 1226 :col 41 :operator "cxx_gt_to_le"
+   :invariant "Mirror of 1219: compare(out-of-ll BIGINT, int) sign decision; > to <= flips (compare 1e20N 1). The out-of-ll arm is never driven by the corpus."}
+  {:rank 7 :file "src/eval/bc/compile.c" :line 1820 :col 25 :operator "cxx_sub_to_add"
+   :invariant "Fused LT_ACC accumulator register `acc_idx = 1 - counter_idx`; 1 + counter_idx mis-selects when the counter is the second binding. Every corpus ACC loop puts the counter first."}
+  {:rank 8 :file "src/eval/bc/compile.c" :line 1605 :col 25 :operator "cxx_sub_to_add"
+   :invariant "Fused DEC_ACC accumulator register `acc_idx = 1 - test_idx`; 1 + test_idx mis-selects when the decremented counter is the second binding. No such corpus loop."}
+  {:rank 9 :file "src/eval/bc/compile.c" :line 1833 :col 27 :operator "cxx_sub_to_add"
+   :invariant "Fused LT_INC carry register `carry_idx = 1 - counter_idx`; 1 + counter_idx mis-selects when the counter is the second binding. No corpus LT_INC loop places it second."}]}

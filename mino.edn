@@ -47,6 +47,10 @@
                      :task mino-tests.tasks/mutation-tce}
   mutation-tce-all  {:doc  "TCE-prune every lane and print the aggregate equivalent-fraction"
                      :task mino-tests.tasks/mutation-tce-all}
+  gen-mutation-baseline {:doc "Regenerate baseline.edn: classify accepted survivors after TCE"
+                         :task mino-tests.tasks/gen-mutation-baseline}
+  check-mutation    {:doc  "Gate: fail only on a mutation survivor absent from baseline.edn"
+                     :task mino-tests.tasks/check-mutation}
   bump-mino         {:doc  "Move mino submodule to a tag and stage the pin"
                      :task mino-tests.tasks/bump-mino}
   ci-matrix         {:doc  "Run release-gate inside Linux Docker images (dev host only)"

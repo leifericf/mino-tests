@@ -1102,6 +1102,201 @@
                        (if (:sampled? r) "  [SAMPLED]" ""))))
     0))
 
+;; ---- Mutation lane: baseline + check-mutation gate ----------------
+;;
+;; TCE proved only ~12 of the ~2007 survivors are -O2-foldable
+;; equivalents (0.6%). The rest :differ at the object level -- they DO
+;; change behaviour -- yet the scoped fast oracles did not kill them.
+;; The honest reading (the plan's expected R2 picture): the survivor
+;; totals are dominated NOT by compiler-equivalent noise but by the
+;; deliberately-narrow fast oracles. Each lane's kill-signal loads a
+;; handful of mino test files (~5-10 s) rather than the 5.5-min full
+;; suite, so a mutant on a path those files never drive survives even
+;; though the full suite would very likely kill it.
+;;
+;; So each accepted survivor is classified into one of three buckets:
+;;   :tce-equivalent -- TCE-proven (object byte-identical). No test can
+;;                      ever kill it; provably safe to accept.
+;;   :oracle-gap     -- behaviour-changing, but the SCOPED fast oracle
+;;                      does not exercise the path; the full mino suite
+;;                      almost certainly would. Not a missing test in
+;;                      mino, an artifact of the fast-oracle scoping.
+;;   :genuine-gap    -- a real missing regression test: a correctness or
+;;                      safety invariant the full suite would NOT catch.
+;;                      Enumerated explicitly (the curated shortlist);
+;;                      everything else defaults to :oracle-gap.
+;;
+;; The baseline records the ACCEPTED survivor set after TCE. check-
+;; mutation fails ONLY on a survivor whose site+operator key is absent
+;; from the baseline (a NEW survivor a code or test change introduced).
+
+;; Header sites are macro-expansion / assertion-inline points: a mutant
+;; there flips an assertion or an internal-invariant check that the fast
+;; oracle's NDEBUG-off subset never trips, but the full suite drives.
+(def ^:private oracle-gap-header-files
+  #{"src/runtime/value_assert.h" "src/runtime/internal.h"})
+
+;; The curated :genuine-gap shortlist lives in one reviewable artifact,
+;; tests/mutation/reports/genuine_gaps.edn, keyed [rel-file line col
+;; operator] so it is stable across report regens. gen-mutation-baseline
+;; reads it; everything not listed defaults to :oracle-gap.
+
+(defn- rel-mino [file]
+  (let [root (str (mino-src-root) "/")]
+    (if (str/starts-with? file root)
+      (subs file (count root))
+      file)))
+
+(defn- baseline-key
+  "Stable identity for a survivor across report regens: relative file +
+   line + col + operator."
+  [s]
+  [(rel-mino (:file s)) (:line s) (:col s) (:operator s)])
+
+(defn- classify-survivor
+  "Bucket one TCE-classified survivor. gg-keys is the genuine-gap set."
+  [s gg-keys]
+  (let [k    (baseline-key s)
+        relf (first k)
+        tce  (:tce s)]
+    (cond
+      (= tce :equivalent)
+      {:bucket :tce-equivalent
+       :note "TCE: mutated TU compiles to a byte-identical -O2 object; provably equivalent"}
+
+      (contains? gg-keys k)
+      {:bucket :genuine-gap
+       :note "curated genuine gap; see genuine_gaps.edn"}
+
+      (contains? oracle-gap-header-files relf)
+      {:bucket :oracle-gap
+       :note "assertion/internal-invariant macro site; driven by the full suite, not the scoped fast oracle"}
+
+      (= tce :compile-fail)
+      {:bucket :oracle-gap
+       :note "source-reconstruction of the IR mutant does not compile (e.g. ptr-ptr -> ptr+ptr); retained, not provably equivalent"}
+
+      :else
+      {:bucket :oracle-gap
+       :note "behaviour-changing mutant on a path the scoped fast oracle does not drive; the full mino suite exercises it"})))
+
+(def ^:private mutation-lanes
+  [{:dir "src/read"    :tag "src_read"}
+   {:dir "src/values"  :tag "src_values"}
+   {:dir "src/eval/bc" :tag "src_eval_bc"}
+   {:dir "src/gc"      :tag "src_gc"}])
+
+(defn- load-tce-report [tag]
+  (let [edn (str (repo-root) "/tests/mutation/reports/" tag ".tce.edn")]
+    (when (file-exists? edn)
+      (read-string (slurp edn)))))
+
+(defn gen-mutation-baseline
+  "Regenerate tests/mutation/baseline.edn from the TCE reports. Each
+   accepted survivor is classified :tce-equivalent / :oracle-gap /
+   :genuine-gap with a one-line justification. The genuine-gap set is
+   read from tests/mutation/reports/genuine_gaps.edn (the curated
+   shortlist) when present. Returns 0."
+  []
+  (let [root (repo-root)
+        gg-edn (str root "/tests/mutation/reports/genuine_gaps.edn")
+        gg (when (file-exists? gg-edn)
+             (read-string (slurp gg-edn)))
+        gg-notes (into {} (map (fn [e]
+                                 [[(:file e) (:line e) (:col e) (:operator e)]
+                                  (:invariant e)])
+                               (:shortlist gg)))
+        gg-keys (set (keys gg-notes))
+        lanes
+        (mapv
+         (fn [{:keys [dir tag]}]
+           (let [rpt (load-tce-report tag)
+                 classified (:classified rpt)
+                 entries
+                 (mapv
+                  (fn [s]
+                    (let [c (classify-survivor s gg-keys)
+                          k (baseline-key s)
+                          note (if (= (:bucket c) :genuine-gap)
+                                 (get gg-notes k (:note c))
+                                 (:note c))]
+                      {:file (first k) :line (nth k 1) :col (nth k 2)
+                       :operator (nth k 3)
+                       :bucket (:bucket c) :note note}))
+                  classified)
+                 by-bucket (frequencies (map :bucket entries))]
+             {:dir dir
+              :accepted (count entries)
+              :by-bucket (into (sorted-map) by-bucket)
+              :survivors entries}))
+         mutation-lanes)
+        out {:generated-by "gen-mutation-baseline"
+             :note (str "Accepted mutation survivors after TCE pruning. "
+                        "check-mutation fails only on a survivor absent from "
+                        "this set. Buckets: :tce-equivalent (proven), "
+                        ":oracle-gap (scoped fast oracle miss; full suite "
+                        "covers), :genuine-gap (real missing test).")
+             :totals (into (sorted-map)
+                           (apply merge-with +
+                                  (map (fn [l] (into {} (:by-bucket l)))
+                                       lanes)))
+             :lanes lanes}
+        edn (str root "/tests/mutation/baseline.edn")]
+    (spit edn (with-out-str (println (pr-str out))))
+    (println "  baseline:" edn)
+    (doseq [l lanes]
+      (println (format "  %-12s accepted %4d  %s"
+                       (:dir l) (:accepted l) (pr-str (:by-bucket l)))))
+    (println "  totals:" (pr-str (:totals out)))
+    0))
+
+(defn- load-baseline []
+  (let [edn (str (repo-root) "/tests/mutation/baseline.edn")]
+    (when (file-exists? edn)
+      (read-string (slurp edn)))))
+
+(defn- baseline-accepted-keys
+  "The set of accepted survivor keys across all lanes in the baseline."
+  [baseline]
+  (into #{}
+        (for [l (:lanes baseline)
+              s (:survivors l)]
+          [(:file s) (:line s) (:col s) (:operator s)])))
+
+(defn check-mutation
+  "Gate: for each lane's current TCE report, fail only on a survivor
+   whose site+operator key is NOT in baseline.edn (a NEW survivor). A
+   baselined survivor -- equivalent, oracle-gap, or a known genuine gap
+   -- passes. Returns 0 when every survivor is baselined, 1 otherwise.
+   Regenerate the reports first (mutation / mutation-tce) for a live
+   check; run against the committed reports for a cheap re-gate."
+  []
+  (let [baseline (load-baseline)]
+    (if (nil? baseline)
+      (do (println "  ERROR: no baseline.edn; run gen-mutation-baseline first")
+          1)
+      (let [accepted (baseline-accepted-keys baseline)
+            news
+            (vec
+             (for [{:keys [tag dir]} mutation-lanes
+                   :let [rpt (load-tce-report tag)]
+                   :when rpt
+                   s (:classified rpt)
+                   :let [k (baseline-key s)]
+                   :when (not (contains? accepted k))]
+               (assoc s :dir dir :key k)))]
+        (println "  baselined survivors:" (count accepted))
+        (if (empty? news)
+          (do (println "  check-mutation: PASS (no new survivors)")
+              0)
+          (do
+            (println "  check-mutation: FAIL --" (count news) "new survivor(s):")
+            (doseq [n (take 40 news)]
+              (println "    NEW" (:dir n) (pr-str (:key n)) "-" (:desc n)))
+            (when (> (count news) 40)
+              (println "    ... and" (- (count news) 40) "more"))
+            1))))))
+
 (defn cov-run
   "Build the harness with llvm-cov instrumentation, run it, merge
    the profile data, and emit an HTML report. Clang-only; a clean

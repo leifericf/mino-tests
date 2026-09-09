@@ -110,6 +110,14 @@
   (println "[mino-tests] mutation-tce-all (TCE-prune every lane, aggregate equivalent-fraction)")
   (impl/mutation-tce-all))
 
+(defn gen-mutation-baseline [& _]
+  (println "[mino-tests] gen-mutation-baseline (classify accepted survivors into baseline.edn)")
+  (impl/gen-mutation-baseline))
+
+(defn check-mutation [& _]
+  (println "[mino-tests] check-mutation (fail only on a survivor absent from baseline.edn)")
+  (impl/check-mutation))
+
 (defn bump-mino [& args]
   (let [tag (first args)]
     (when-not tag

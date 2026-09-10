@@ -118,6 +118,14 @@ jobs:
           MINO_LEAN_BIN: ${{ github.workspace }}/mino/mino-lean
         run: ./mino/mino tests/adv/runner.clj --seed 0 --mode smoke
 
+      - name: Embed C-harness probes (adv-test-embed)
+        # The C-side whitebox probe registry (tests/adv/embed/*.c),
+        # including the OOM fault-injection probes that link mino's
+        # private internals. Compiles mino's TUs from source, so it also
+        # catches a mino C-tree change that breaks the harness build.
+        timeout-minutes: 8
+        run: ./mino/mino task adv-test-embed
+
       - name: Differential smoke (diff-test)
         env:
           MINO_BIN: ${{ github.workspace }}/mino/mino

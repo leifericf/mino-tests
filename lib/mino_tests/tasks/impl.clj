@@ -1490,31 +1490,22 @@
         ;; collections -- measuring the harness, not correctness, while
         ;; eating the fuzz lane's runtime budget.
         ;;
-        ;; MINO_THREAD_LIMIT grants ample worker headroom: under a
-        ;; 64 KiB nursery on a low-core runner, GC-driven reclamation
-        ;; of finished thread slots lags, so a concurrency test can
-        ;; briefly hold more live workers than the cpu-count default
-        ;; and trip MTH001. That is a thread-pool-sizing artifact of
-        ;; the extreme nursery, orthogonal to the GC-alignment
-        ;; correctness this lane exists to check; the headroom keeps it
-        ;; from masking a real alignment failure. tail -40 keeps mino's
-        ;; end-of-run "Failures:" block so a real failure is legible.
-        ;;
-        ;; image_test and tar_facade_test are excluded for the same
-        ;; harness-not-correctness reason as the perf files: image_test
-        ;; spawns child ./mino processes and asserts their stdout, so it
-        ;; measures a child round-trip's behaviour under the runner's
-        ;; stress (a rare tight-nursery image corruption is tracked in
-        ;; mino/.local/BUGS.md, not an in-process alignment signal);
-        ;; tar_facade_test asserts two file mtimes floor to the same
-        ;; second, which straddles a boundary under the ~10x-slower
-        ;; nursery -- wall-clock timing, not GC alignment.
+        ;; The lane runs on mino's default cpu-count thread grant: the
+        ;; spurious MTH001 that once needed MINO_THREAD_LIMIT=16
+        ;; headroom was a slot-release race in the spawn gate, fixed in
+        ;; mino by the bounded slot-release wait (ADR 66), so the
+        ;; default grant is exercised again. image_test is back in the
+        ;; run with its stdout capture teed to a file for one-hit
+        ;; localization of the rare NUL corruption; tar_facade_test is
+        ;; back with its mtime assertion pinned to the archive-stored
+        ;; seconds instead of two wall-clock stats. tail -40 keeps
+        ;; mino's end-of-run "Failures:" block so a real failure is
+        ;; legible.
         (mapv (fn [sz]
                 (println "  gc-fuzz nursery=" sz "bytes")
                 (let [r (run-in-mino [["MINO_GC_NURSERY_BYTES" sz]
-                                       ["MINO_THREAD_LIMIT" "16"]
                                        ["MINO_TEST_EXCLUDE"
-                                        "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test,compress_perf_test,zip_perf_test,zip_fuzz_test,image_test,tar_facade_test"]]
+                                        "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test,compress_perf_test,zip_perf_test,zip_fuzz_test"]]
                                       "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -40")]
                   (println "    " (clojure.string/trim (or (:out r) "")))
                   {:nursery sz :exit (:exit r) :ok (zero? (:exit r))}))
@@ -1558,17 +1549,24 @@
   "Run mino's tests/run.clj with MINO_GC_VERIFY=1. The verifier
    walks every live OLD before each minor and asserts no unreported
    YOUNG pointers; aborts on a missing write barrier or remset
-   entry. Allowed-to-fail until the existing pre-cycle barrier-miss
-   sites in mino's runtime are also resolved (see mino's
-   .local/BUGS.md). Useful as a regression detector for any new
-   site introduced after the cleanup."
+   entry. The perf-shape files are excluded: the per-minor OLD walk
+   multiplies their runtime ~50x while adding no barrier coverage
+   the rest of the suite lacks. Throws on abort so a barrier
+   regression shows red; the workflow step stays allowed-to-fail
+   only for the post-cycle probation window."
   []
-  (println "  gc-verify (allowed-to-fail; tracks known barrier-miss bugs)")
-  (let [r (run-in-mino [["MINO_GC_VERIFY" "1"]]
-                       "./mino tests/run.clj 2>&1 | tail -3")]
+  (println "  gc-verify (aborts on a barrier/remset miss)")
+  (let [r (run-in-mino [["MINO_GC_VERIFY" "1"]
+                        ["MINO_TEST_EXCLUDE"
+                         "json_perf_test,regex_perf_test,string_perf_test,reduce_perf_test,csv_perf_test,toml_perf_test,yaml_perf_test,html_perf_test,xml_perf_test,html_fuzz_test,xml_fuzz_test,compress_perf_test,zip_perf_test,zip_fuzz_test"]]
+                       "set -o pipefail; ./mino tests/run.clj 2>&1 | tail -15")]
     (println "    " (clojure.string/trim (or (:out r) "")))
-    ;; Always return 0 -- this is a tracking signal, not a gate.
-    0))
+    (if (zero? (:exit r))
+      0
+      ;; run-task! ignores a returned exit code; throw so the abort
+      ;; cannot ride through the CI step as a false green.
+      (throw (ex-info "gc-verify aborted on a barrier/remset miss"
+                      {:exit (:exit r)})))))
 
 (defn asan-per-file
   "Build mino with ASan, then run each test file as its own

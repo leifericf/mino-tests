@@ -93,7 +93,9 @@ jobs:
     defaults:
       run:
         shell: bash
-    timeout-minutes: 105
+    # Budget: stress 15 + fuzz 65 + subset 10 + verify 60 (the verify
+    # walk multiplies suite runtime) + asan-per-file and slack.
+    timeout-minutes: 170
 
     steps:
       - uses: actions/checkout@v4
@@ -116,16 +118,13 @@ jobs:
         # sequence. As the suite grew a single pass nearly fills the
         # old budget, so the lane runs the extreme size only.
         #
-        # continue-on-error like the gc-verify step below: this lane
-        # found and drove a real deterministic bug fix (the reader
-        # VALARR barrier), but the full suite at 64K also reliably
-        # trips a deferred tight-nursery GC Heisenbug that surfaces in
-        # a different collection test each run and does not reproduce
-        # in isolation (tracked in mino/.local/BUGS.md). The task still
-        # throws on failure, so a regression stays visibly red in the
-        # log; it just does not block the nightly until that Heisenbug
-        # is root-caused in a focused GC cycle. Promotion to blocking
-        # is the gate for that cycle landing.
+        # Probation: the tight-nursery GC cycle landed the suspected
+        # root causes (the IC-slot and vec-spine barrier no-ops, the
+        # MTH001 slot-release race; mino ADR 66), the image/tar test
+        # exclusions and the thread-limit headroom are lifted, and the
+        # task throws on failure so a regression shows visibly red.
+        # Drop this continue-on-error (and gc-verify's below) after 7
+        # consecutive green nightlies on this configuration.
         continue-on-error: true
         run: ./mino/mino task gc-fuzz
         timeout-minutes: 65
@@ -138,13 +137,16 @@ jobs:
         timeout-minutes: 10
 
       - name: GC verify (allowed-to-fail)
-        # MINO_GC_VERIFY=1 aborts on a barrier-or-remset miss.
-        # Currently a tracking signal: the task wraps the abort and
-        # always exits 0 until mino's pre-existing barrier-miss
-        # sites are also resolved.
+        # MINO_GC_VERIFY=1 aborts on a barrier-or-remset miss; the
+        # task now throws on the abort instead of swallowing it, so a
+        # miss shows red here. The verify walk multiplies suite
+        # runtime (every live OLD is walked before each minor), hence
+        # the raised timeout; the perf-shape files are excluded in the
+        # task for the same reason. Same probation as gc-fuzz above:
+        # drop continue-on-error after 7 consecutive green nightlies.
         continue-on-error: true
         run: ./mino/mino task gc-verify
-        timeout-minutes: 5
+        timeout-minutes: 60
 
       - name: ASan per file
         # One ASan subprocess per mino test file. Catches Heisenbugs

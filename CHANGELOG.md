@@ -137,6 +137,11 @@ Probe verdict at cycle close: **3432 tested / 3389 pass / 0 fail /
 0 mino-error / 17 allowlisted / 0 pending / 26 jvm-agree-throw**,
 with the ClojureDocs probe unchanged-green at 1195/0/0/114.
 
+The acid-test cycle that followed pinned two `eval` tuples for
+constructed code (cons/concat-built forms carry lazy spines and must
+evaluate like the proper list they express), raising the corpus to
+**3434 tested / 3391 pass** with every other count unchanged.
+
 ## v0.10.4 — Drop partition-spiral allowlist after apply-lazy fix
 
 Mino v0.283.0 makes `apply` pass-through lazy / chunked tails to

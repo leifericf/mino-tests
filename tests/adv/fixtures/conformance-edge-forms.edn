@@ -753,4 +753,9 @@
    {:var "vector?", :apply-palette 1}
    {:var "volatile?", :apply-palette 1}
    {:var "zero?", :apply-palette 1}
+
+   ;; eval of constructed code: cons/concat-built forms carry lazy
+   ;; spines and must evaluate like the proper list they express.
+   {:var "eval", :form "(eval (concat ['+ 1] [2]))"}
+   {:var "eval", :form "(eval (cons 'vector (concat [1] (concat [2] [3]))))"}
  ]}

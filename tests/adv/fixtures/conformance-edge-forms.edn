@@ -253,6 +253,71 @@
    {:var "unreduced", :form "(unreduced 5)"}
    {:var "unreduced", :form "(unreduced nil)"}
    {:var "unreduced", :form "(reduced? (unreduced (reduced (reduced 4))))"}
+   {:var "lazy-seq", :form "(lazy-seq)"}
+   {:var "lazy-seq", :form "(lazy-seq nil)"}
+   {:var "lazy-seq", :form "(lazy-seq (lazy-seq [1 2]))"}
+   {:var "lazy-seq", :form "(let [ran (atom false)] (lazy-seq (reset! ran true) [1]) @ran)"}
+   {:var "lazy-seq", :form "(let [n (atom 0) s (lazy-seq (swap! n inc) [1 2])] [(first s) (first s) @n])"}
+   {:var "lazy-seq", :form "(let [fib (fn fib [a b] (lazy-seq (cons a (fib b (+ a b)))))] (take 10 (fib 0 1)))"}
+   {:var "lazy-seq", :form "(let [n (atom 0) step (fn step [i] (lazy-seq (swap! n inc) (cons i (step (inc i)))))] [(doall (take 3 (step 0))) @n])"}
+   {:var "doall", :form "(doall (map inc [1 2 3]))"}
+   {:var "doall", :form "(doall [])"}
+   {:var "doall", :form "(let [s (map inc [1 2 3])] (identical? s (doall s)))"}
+   {:var "doall", :form "(doall 2 (map inc [1 2 3]))"}
+   {:var "doall", :form "(let [n (atom 0) s (map (fn [x] (swap! n inc) x) (iterate inc 0))] (doall 2 s) @n)"}
+   {:var "dorun", :form "(dorun (map inc [1 2 3]))"}
+   {:var "dorun", :form "(dorun nil)"}
+   {:var "dorun", :form "(dorun 0 (map inc [1 2]))"}
+   {:var "dorun", :form "(dorun 3 (cycle [1 2]))"}
+   {:var "concat", :form "(concat)"}
+   {:var "concat", :form "(concat nil)"}
+   {:var "concat", :form "(concat [1] [2] [3])"}
+   {:var "concat", :form "(concat nil [1] nil [2] nil)"}
+   {:var "concat", :form "(concat \"ab\" [1])"}
+   {:var "concat", :form "(concat {:a 1} [:x])"}
+   {:var "concat", :form "(let [n (atom 0)] [(first (concat [1] (map (fn [x] (swap! n inc) x) (iterate inc 0)))) @n])"}
+   {:var "concat", :form "(let [n (atom 0) s (concat [1] (map (fn [x] (swap! n inc) x) (iterate inc 0)))] [(second s) @n])"}
+   {:var "concat", :form "(last (reduce concat (map vector (range 100))))"}
+   {:var "lazy-cat", :form "(lazy-cat)"}
+   {:var "lazy-cat", :form "(lazy-cat [1 2] [3])"}
+   {:var "lazy-cat", :form "(let [n (atom 0)] [(first (lazy-cat [1] (do (swap! n inc) [2]))) @n])"}
+   {:var "lazy-cat", :form "(let [n (atom 0) s (lazy-cat [1] (do (swap! n inc) [2 3]))] [(doall s) @n])"}
+   {:var "lazy-cat", :form "(let [n (atom 0)] (lazy-cat (do (swap! n inc) [1])) @n)"}
+   {:var "lazy-cat", :form "(take 6 (lazy-cat [1 2] (cycle [9])))"}
+   {:var "cycle", :form "(take 7 (cycle [1 2 3]))"}
+   {:var "cycle", :form "(cycle [])"}
+   {:var "cycle", :form "(cycle nil)"}
+   {:var "cycle", :form "(take 3 (cycle [nil]))"}
+   {:var "cycle", :form "(nth (cycle [:a :b]) 100)"}
+   {:var "cycle", :form "(take-while pos? (cycle [3 2 1 0 5]))"}
+   {:var "repeat", :form "(repeat 3 :x)"}
+   {:var "repeat", :form "(repeat 0 :x)"}
+   {:var "repeat", :form "(repeat -1 :x)"}
+   {:var "repeat", :form "(take 4 (repeat 7))"}
+   {:var "repeat", :form "(nth (repeat 5) 1000)"}
+   {:var "repeat", :form "(take 5 (concat (repeat 2 :a) (repeat :b)))"}
+   {:var "repeatedly", :form "(let [c (atom 0)] [(doall (repeatedly 3 (fn [] (swap! c inc)))) @c])"}
+   {:var "repeatedly", :form "(let [c (atom 0)] (repeatedly 3 (fn [] (swap! c inc))) @c)"}
+   {:var "repeatedly", :form "(repeatedly 0 (fn [] :x))"}
+   {:var "repeatedly", :form "(repeatedly -2 (fn [] :x))"}
+   {:var "repeatedly", :form "(let [c (atom 0) s (repeatedly (fn [] (swap! c inc)))] [(doall (take 2 s)) @c])"}
+   {:var "repeatedly", :form "(let [c (atom 0) s (repeatedly (fn [] (swap! c inc)))] [(first s) @c])"}
+   {:var "take-while", :form "(take-while pos? nil)"}
+   {:var "take-while", :form "(take-while (constantly false) [1 2 3])"}
+   {:var "take-while", :form "(take-while neg? [-1 -2 3 -4])"}
+   {:var "take-while", :form "(take-while identity [1 false 2])"}
+   {:var "take-while", :form "(let [n (atom 0)] [(doall (take-while (fn [x] (swap! n inc) (< x 3)) (iterate inc 0))) @n])"}
+   {:var "take-while", :form "(into [] (take-while pos?) [1 2 -3 4])"}
+   {:var "take-while", :form "(transduce (take-while pos?) + 0 [1 2 -3 4 5])"}
+   {:var "take-while", :form "(take-while neg? (cycle [-1 -2 3]))"}
+   {:var "drop-while", :form "(drop-while pos? nil)"}
+   {:var "drop-while", :form "(drop-while (constantly true) [1 2 3])"}
+   {:var "drop-while", :form "(drop-while neg? [-1 -2 3 -4])"}
+   {:var "drop-while", :form "(drop-while nil? [nil nil 1 nil])"}
+   {:var "drop-while", :form "(into [] (drop-while neg?) [-1 -2 3 -4])"}
+   {:var "drop-while", :form "(let [n (atom 0)] [(doall (take 2 (drop-while (fn [x] (swap! n inc) (< x 3)) (iterate inc 0)))) @n])"}
+   {:var "drop-while", :form "(take 5 (drop-while neg? (cycle [-1 -2 3])))"}
+   {:var "drop-while", :form "(let [p pos? c [1 2 -3 4]] [(take-while p c) (drop-while p c)])"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

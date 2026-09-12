@@ -502,6 +502,77 @@
    {:var "comparator", :form "(mapv (comparator <) [1 2 1] [2 1 1])"}
    {:var "comparator", :form "(vec (sort (comparator >) [1 3 2]))"}
    {:var "comparator", :form "(vec (sort-by count (comparator >) [[1] [1 2 3] [1 2]]))"}
+   {:var "+'", :form "(+' 9223372036854775807 1)"}
+   {:var "+'", :form "(+' -9223372036854775808 -1)"}
+   {:var "+'", :form "(+' 1 2)"}
+   {:var "+'", :form "(+' 1/2 1/2)"}
+   {:var "+'", :form "(+' 0.5 0.5)"}
+   {:var "+'", :form "(+' 1M 1)"}
+   {:var "+'", :form "(+' 10N 5)"}
+   {:var "+'", :form "(+' 2.5 1N)"}
+   {:var "+'", :form "(reduce +' (repeat 3 9223372036854775807))"}
+   {:var "*'", :form "(*' 4611686018427387904 2)"}
+   {:var "*'", :form "(*' -4611686018427387905 2)"}
+   {:var "*'", :form "(*' 2/3 3/2)"}
+   {:var "*'", :form "(*' 2 3)"}
+   {:var "*'", :form "(*' 1.5M 2M)"}
+   {:var "inc'", :form "(inc' 9223372036854775807)"}
+   {:var "inc'", :form "(inc' 10N)"}
+   {:var "inc'", :form "(inc' 5)"}
+   {:var "inc'", :form "(inc' 1.5)"}
+   {:var "inc'", :form "(inc' 1/2)"}
+   {:var "inc'", :form "(inc' 1M)"}
+   {:var "dec'", :form "(dec' -9223372036854775808)"}
+   {:var "dec'", :form "(dec' 5)"}
+   {:var "dec'", :form "(dec' 1/2)"}
+   {:var "dec'", :form "(dec' 1.5M)"}
+   {:var "bigdec", :form "(bigdec \"1.5\")"}
+   {:var "bigdec", :form "(bigdec \"1E+3\")"}
+   {:var "bigdec", :form "(bigdec \".5\")"}
+   {:var "bigdec", :form "(bigdec \"1.500\")"}
+   {:var "bigdec", :form "(bigdec \"-0.0\")"}
+   {:var "bigdec", :form "(bigdec 1/4)"}
+   {:var "bigdec", :form "(bigdec 42)"}
+   {:var "bigdec", :form "(bigdec 10N)"}
+   {:var "bigdec", :form "(bigdec 2.5M)"}
+   {:var "bigdec", :form "(bigdec 1e-3)"}
+   {:var "bigdec", :form "(+ (bigdec 1) (bigdec 0.5))"}
+   {:var "bigint", :form "(bigint \"123\")"}
+   {:var "bigint", :form "(bigint \"-07\")"}
+   {:var "bigint", :form "(bigint \"123456789012345678901234567890\")"}
+   {:var "bigint", :form "(bigint 7/2)"}
+   {:var "bigint", :form "(bigint -7/2)"}
+   {:var "bigint", :form "(bigint 2.5M)"}
+   {:var "bigint", :form "(bigint -2.5M)"}
+   {:var "bigint", :form "(bigint 2.9)"}
+   {:var "bigint", :form "(bigint -2.9)"}
+   {:var "bigint", :form "(= 1N 1)"}
+   {:var "bigint", :form "(+ 1N 1)"}
+   {:var "bigint", :form "(= (bigint 2.5M) (bigint 5/2))"}
+   {:var "numerator", :form "(numerator 4/8)"}
+   {:var "numerator", :form "(numerator -1/2)"}
+   {:var "denominator", :form "(denominator 4/8)"}
+   {:var "denominator", :form "(denominator -1/2)"}
+   {:var "denominator", :form "(denominator (/ 1 9223372036854775807))"}
+   {:var "==", :form "(== 1 1.0 1N)"}
+   {:var "==", :form "(== 1/2 0.5)"}
+   {:var "==", :form "(== 1M 1)"}
+   {:var "==", :form "(== 1.0M 1)"}
+   {:var "==", :form "(== ##NaN ##NaN)"}
+   {:var "==", :form "(== -0.0 0.0)"}
+   {:var "==", :form "(== :kw)"}
+   {:var "==", :form "(== 1 1.5)"}
+   {:var "==", :form "(== 2 2.0 2N 2.0M)"}
+   {:var "==", :form "(== 1/3 0.3333333333333333)"}
+   {:var "with-precision", :form "(with-precision 3 (/ 1M 3))"}
+   {:var "with-precision", :form "(with-precision 2 :rounding CEILING (/ 1M 3))"}
+   {:var "with-precision", :form "(with-precision 2 :rounding FLOOR (/ 2M 3))"}
+   {:var "with-precision", :form "(with-precision 1 :rounding HALF_EVEN (+ 0.25M 0M))"}
+   {:var "with-precision", :form "(with-precision 1 :rounding HALF_UP (+ 0.25M 0M))"}
+   {:var "with-precision", :form "(with-precision 2 (+ 1M 1M))"}
+   {:var "with-precision", :form "(with-precision 2 (with-precision 5 (/ 1M 3)))"}
+   {:var "with-precision", :form "(with-precision 5 (with-precision 2 (/ 1M 3)))"}
+   {:var "with-precision", :form "(with-precision 3 (* 1.23456M 1M))"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

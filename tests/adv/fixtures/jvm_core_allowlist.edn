@@ -1,12 +1,12 @@
 ;; Allowlist for the jvm-core differential probe. Keys are probe keys
-;; ("ns/var:aspect"); values are the owning fix or documented
-;; divergence. Two-tier lookup in diff_jvm_core.clj: exact key first,
-;; then a prefix covering every probe beneath it. As each mino fix
-;; lands, its entries are deleted and the probes must pass.
-{"lenient.distinct-set" "documented: distinct on set"
- "lenient.satisfies-garbage" "documented: satisfies lenient"
- "lenient.re-seq-string-pattern" "documented: string patterns"
- "lenient.identical-strings" "documented: identical literals"
- "lenient.chunked-range" "documented: chunked representation"
- "lenient.atom-repr" "documented: atom repr"
- "arglists.mino-true" "documented divergence: mino-true arglists (slurp opts unimplemented)"}
+;; ("ns/var:aspect"); values are the owning documented divergence.
+;; Two-tier lookup in diff_jvm_core.clj: exact key first, then a
+;; prefix covering every probe beneath it. As each mino fix lands,
+;; its entries are deleted and the probes must pass.
+;; Audited 2026-09-12: every entry cites its record; host-layer
+;; divergences cite mino ADR 67.
+{"lenient.distinct-set" "mino answers where the JVM's host collection machinery throws (ADR 67)"
+ "lenient.identical-strings" "literal interning is host identity, not language surface (ADR 67)"
+ "lenient.chunked-range" "chunked representation is an impl detail, not a contract"
+ "lenient.atom-repr" "#atom print form vs JVM class@hash toString (ADR 67)"
+ "arglists.mino-true" "mino-true arglists per ADR 34; slurp opts arity deferred there"}

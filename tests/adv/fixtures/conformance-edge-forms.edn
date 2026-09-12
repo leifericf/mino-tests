@@ -318,6 +318,65 @@
    {:var "drop-while", :form "(let [n (atom 0)] [(doall (take 2 (drop-while (fn [x] (swap! n inc) (< x 3)) (iterate inc 0)))) @n])"}
    {:var "drop-while", :form "(take 5 (drop-while neg? (cycle [-1 -2 3])))"}
    {:var "drop-while", :form "(let [p pos? c [1 2 -3 4]] [(take-while p c) (drop-while p c)])"}
+   {:var "pr", :form "(with-out-str (pr \"a\\\"b\\\\c\\nd\"))"}
+   {:var "pr", :form "(with-out-str (pr \"a\\tb\"))"}
+   {:var "pr", :form "(with-out-str (pr \"\"))"}
+   {:var "pr", :form "(with-out-str (pr nil))"}
+   {:var "pr", :form "(with-out-str (pr 1 2 3))"}
+   {:var "pr", :form "(with-out-str (pr [1 \"two\" :three 'four]))"}
+   {:var "pr", :form "(with-out-str (pr {:a/b 1}))"}
+   {:var "pr", :form "(with-out-str (pr '(1 (2 (3)))))"}
+   {:var "pr", :form "(with-out-str (pr 3/4))"}
+   {:var "pr", :form "(with-out-str (pr 1.5M))"}
+   {:var "pr", :form "(with-out-str (pr \\a \\space \\newline \\tab))"}
+   {:var "pr", :form "(with-out-str (pr #\"a.b\\d\"))"}
+   {:var "pr", :form "(with-out-str (pr [\"a\" \"b\\\"c\"]))"}
+   {:var "prn", :form "(with-out-str (prn))"}
+   {:var "prn", :form "(with-out-str (prn \"x\"))"}
+   {:var "prn", :form "(with-out-str (prn 1 2))"}
+   {:var "prn", :form "(with-out-str (prn [1 2] {:a 1}))"}
+   {:var "print", :form "(with-out-str (print \"a b\"))"}
+   {:var "print", :form "(with-out-str (print \\a))"}
+   {:var "print", :form "(with-out-str (print nil))"}
+   {:var "print", :form "(with-out-str (print :k 'sym))"}
+   {:var "print", :form "(with-out-str (print [\"a\" \\b]))"}
+   {:var "print", :form "(with-out-str (print 1 2 3))"}
+   {:var "print", :form "(with-out-str (print \"a\\nb\"))"}
+   {:var "println", :form "(with-out-str (println))"}
+   {:var "println", :form "(with-out-str (println \"hi\"))"}
+   {:var "println", :form "(with-out-str (println \"a\" \"b\"))"}
+   {:var "println", :form "(with-out-str (println nil nil))"}
+   {:var "println", :form "(with-out-str (println [1 \"a\"]))"}
+   {:var "pr-str", :form "(pr-str)"}
+   {:var "pr-str", :form "(pr-str \"a\\\"b\")"}
+   {:var "pr-str", :form "(pr-str 1 2 3)"}
+   {:var "pr-str", :form "(pr-str (pr-str \"a\"))"}
+   {:var "pr-str", :form "(= (pr-str [1 \"x\" \\y]) (with-out-str (pr [1 \"x\" \\y])))"}
+   {:var "pr-str", :form "(binding [*print-length* 3] (pr-str (range 10)))"}
+   {:var "pr-str", :form "(binding [*print-level* 2] (pr-str [[[[:deep]]]]))"}
+   {:var "pr-str", :form "(binding [*print-length* 0] (pr-str [1 2]))"}
+   {:var "pr-str", :form "(binding [*print-length* 1] (pr-str [[1 2] [3 4]]))"}
+   {:var "pr-str", :form "(binding [*print-meta* true] (pr-str (with-meta [1] {:m true})))"}
+   {:var "prn-str", :form "(prn-str)"}
+   {:var "prn-str", :form "(prn-str \"s\")"}
+   {:var "prn-str", :form "(prn-str 1 2)"}
+   {:var "print-str", :form "(print-str)"}
+   {:var "print-str", :form "(print-str \"a\" \"b\")"}
+   {:var "print-str", :form "(print-str nil)"}
+   {:var "print-str", :form "(print-str \\x :k 'sym)"}
+   {:var "print-str", :form "(= (print-str \"q\") (pr-str \"q\"))"}
+   {:var "println-str", :form "(println-str)"}
+   {:var "println-str", :form "(println-str \"a\" 1)"}
+   {:var "printf", :form "(with-out-str (printf \"%d-%s\" 42 \"x\"))"}
+   {:var "printf", :form "(with-out-str (printf \"%.2f\" 3.14159))"}
+   {:var "printf", :form "(with-out-str (printf \"%x\" 255))"}
+   {:var "printf", :form "(with-out-str (printf \"%n\"))"}
+   {:var "printf", :form "(let [v (atom :unset) s (with-out-str (reset! v (printf \"x\")))] [s @v])"}
+   {:var "with-out-str", :form "(with-out-str)"}
+   {:var "with-out-str", :form "(with-out-str (+ 1 2))"}
+   {:var "with-out-str", :form "(with-out-str (print \"a\") (print \"b\"))"}
+   {:var "with-out-str", :form "(with-out-str (print \"a\" (with-out-str (print \"b\"))))"}
+   {:var "with-out-str", :form "(let [s (with-out-str (print \"out\") :ret)] s)"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

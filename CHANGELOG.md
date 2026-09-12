@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — mutation-testing lane; zip/gzip binary-level E2E; JVM-Clojure ground truth
+## Unreleased — mutation-testing lane; zip/gzip binary-level E2E; JVM-Clojure ground truth; ClojureDocs allowlist burn-down
 
 New Mull-based mutation-testing lane over the four must-never-fail
 code areas of the pinned mino submodule: `src/read` (the untrusted-
@@ -77,6 +77,32 @@ Probe verdict against mino HEAD: **1173 pass / 0 fail / 0 mino-error
 / 154 allowlisted out of 1327**, up from 1169 pass in v0.10.4 after
 the mino printer fix (uppercase `E` in scientific notation; `:float32`
 prints with 32-bit-rounded precision).
+
+The ClojureDocs allowlist then got its first full-corpus audit.
+Every one of the 150 entries was re-verified against mino HEAD with
+an empty allowlist: 16 covered tuples that no longer exist in the
+corpus, 9 indexed entries pointed at dead indices, and 9 more
+covered examples that mino now gets right after its conformance
+fixes (function cmaps in string escape, the resolve/ns-resolve env
+arity, typed-array insert coercion, spec generation and conform
+coverage, transduce Reduced survival, eduction re-run semantics,
+pr-str realization capture, reader-conditional and tagged-literal
+pprint dispatch, the satisfies? non-protocol guard, and the
+compiled-pattern requirement in the re match fns). Wildcard entries
+over partially-passing vars became indexed entries, regaining about
+15 passing examples. Every surviving entry carries a reason citing
+the governing decision record. The rewritten list holds 121 entries.
+
+The jvm-core allowlist went through the same audit: 8 entries down
+to 5, two dropped as fixed, the keepers reworded with citations.
+Corpus tuple sources call pprint through its qualified name now, so
+tuples survive namespaces that do not refer it in. The gc-verify CI
+lane fails on real verify gaps instead of masking them, and the
+gc-fuzz maskings it depended on are lifted.
+
+Probe verdict after the audit and the mino conformance fixes:
+**1195 pass / 0 fail / 0 mino-error / 114 allowlisted over the
+1309-example corpus**, up from 1173 pass.
 
 ## v0.10.4 — Drop partition-spiral allowlist after apply-lazy fix
 

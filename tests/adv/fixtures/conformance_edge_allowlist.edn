@@ -8,6 +8,12 @@
  "clojure.core/char:1"
  "mino ADR 68: unnamed characters print as \\uXXXX escapes, not raw control bytes; the printed form reads back to the same character in canon"
 
+ "clojure.core/sequence:0"
+ "mino ADR 70: sequences realize per element with no eager first element; the reference computes one element at sequence creation"
+
+ "clojure.core/sequence:1"
+ "mino ADR 70: sequences realize per element, never in chunks; the reference realizes the whole five-element input at first force"
+
  "clojure.core/counted?:22"
  "mino ADR 69: counted? reports mino's own structures; (range 5) is a lazy sequence here, so its count is not constant-time and counted? honestly answers false"
 

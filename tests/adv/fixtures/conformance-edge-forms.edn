@@ -194,6 +194,65 @@
    {:var "re-matches", :form "(re-matches #\"[A-Z0-9]\" \"-\")"}
    {:var "re-matches", :form "(re-matches #\"[-A-Za-z0-9_]*\" \"a-b\")"}
    {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]*\" \"aB9-_\")"}
+   {:var "transduce", :form "(transduce (map inc) + [1 2 3])"}
+   {:var "transduce", :form "(transduce (map inc) + 100 [1 2 3])"}
+   {:var "transduce", :form "(transduce (map inc) conj [1 2 3])"}
+   {:var "transduce", :form "(transduce (map inc) conj [10] [1 2])"}
+   {:var "transduce", :form "(transduce (map inc) + 0 nil)"}
+   {:var "transduce", :form "(let [done (atom 0)] [(transduce (map inc) (completing + (fn [acc] (swap! done inc) acc)) 0 [1 2 3]) @done])"}
+   {:var "transduce", :form "(transduce (map inc) (completing + -) 0 [1 2 3])"}
+   {:var "transduce", :form "(let [calls (atom 0)] [(transduce (map (fn [x] (swap! calls inc) x)) (fn ([acc] acc) ([acc x] (if (>= acc 3) (reduced acc) (+ acc x)))) 0 (range 100)) @calls])"}
+   {:var "transduce", :form "(let [calls (atom 0)] [(transduce (comp (map (fn [x] (swap! calls inc) x)) (take 3)) + 0 (range 100)) @calls])"}
+   {:var "sequence", :form "(let [calls (atom 0)] (sequence (map (fn [x] (swap! calls inc) x)) [1 2 3]) @calls)"}
+   {:var "sequence", :form "(let [calls (atom 0) s (sequence (map (fn [x] (swap! calls inc) x)) [1 2 3 4 5])] [(doall (take 2 s)) @calls])"}
+   {:var "sequence", :form "(sequence (map inc) [])"}
+   {:var "sequence", :form "(seq (sequence (map inc) []))"}
+   {:var "sequence", :form "(sequence (map +) [1 2 3] [10 20 30 40])"}
+   {:var "sequence", :form "(sequence (map vector) [1 2 3] [:a :b])"}
+   {:var "sequence", :form "(sequence (take 3) (range))"}
+   {:var "sequence", :form "(sequence (comp (filter odd?) (map str)) (range 10))"}
+   {:var "eduction", :form "(eduction (map inc) [1 2 3])"}
+   {:var "eduction", :form "(reduce + 0 (eduction (map inc) [1 2 3]))"}
+   {:var "eduction", :form "(seq (eduction (filter odd?) (range 6)))"}
+   {:var "eduction", :form "(eduction (map inc) (filter odd?) (range 6))"}
+   {:var "eduction", :form "(let [e (eduction (map inc) [1 2 3])] [(reduce + 0 e) (reduce + 0 e)])"}
+   {:var "eduction", :form "(into [] (eduction (take 3) (range)))"}
+   {:var "eduction", :form "(transduce (map inc) + 0 (eduction (map inc) [1 2 3]))"}
+   {:var "cat", :form "(into [] cat [[1 2] [3 4]])"}
+   {:var "cat", :form "(into [] cat [])"}
+   {:var "cat", :form "(into [] cat [[] [] [1]])"}
+   {:var "cat", :form "(into [] (comp cat (take 2)) [[1 2 3] [4]])"}
+   {:var "cat", :form "(sequence cat [[1 2] [] [3]])"}
+   {:var "cat", :form "(into [] cat [\"ab\" \"cd\"])"}
+   {:var "cat", :form "(into [] (comp cat cat (take 3)) [[[1 2] [3]] [[4]]])"}
+   {:var "cat", :form "(let [calls (atom 0)] [(into [] (comp cat (map (fn [x] (swap! calls inc) x)) (take 2)) [[1 2 3] [4 5]]) @calls])"}
+   {:var "completing", :form "((completing +) 1 2)"}
+   {:var "completing", :form "((completing +))"}
+   {:var "completing", :form "((completing conj) [1 2])"}
+   {:var "completing", :form "((completing + str) 42)"}
+   {:var "completing", :form "(let [rf (completing + (fn [acc] (* 10 acc)))] [(transduce identity rf 0 [1 2 3]) (reduce rf 0 [1 2 3])])"}
+   {:var "completing", :form "(let [n (atom 0)] [(transduce (map inc) (completing conj (fn [acc] (swap! n inc) acc)) [] [1 2 3]) @n])"}
+   {:var "halt-when", :form "(transduce (halt-when #{:stop}) conj [] [1 2 :stop 3])"}
+   {:var "halt-when", :form "(into [] (halt-when #{:stop}) [1 2 3])"}
+   {:var "halt-when", :form "(transduce (halt-when odd? (fn [acc x] (conj acc [:halted x]))) conj [] [2 4 5 6])"}
+   {:var "halt-when", :form "(transduce (comp (map inc) (halt-when #(> % 3))) + 0 (range 100))"}
+   {:var "halt-when", :form "(transduce (halt-when pos?) + 0 [5 6 7])"}
+   {:var "reduced", :form "(reduce (fn [acc x] (if (> acc 10) (reduced acc) (+ acc x))) 0 (range 100))"}
+   {:var "reduced", :form "(let [calls (atom 0)] [(reduce (fn [acc x] (swap! calls inc) (if (= x 3) (reduced :done) acc)) nil (range 100)) @calls])"}
+   {:var "reduced", :form "(reduce (fn [acc x] (reduced :first)) :init [1 2 3])"}
+   {:var "reduced", :form "(deref (reduced 7))"}
+   {:var "reduced?", :form "(reduced? (reduced 1))"}
+   {:var "reduced?", :form "(reduced? 1)"}
+   {:var "reduced?", :form "(reduced? nil)"}
+   {:var "reduced?", :form "(reduced? (unreduced (reduced 1)))"}
+   {:var "ensure-reduced", :form "(unreduced (ensure-reduced (reduced 1)))"}
+   {:var "ensure-reduced", :form "(unreduced (ensure-reduced 2))"}
+   {:var "ensure-reduced", :form "(reduced? (ensure-reduced 3))"}
+   {:var "ensure-reduced", :form "(reduced? (ensure-reduced (reduced 1)))"}
+   {:var "unreduced", :form "(unreduced (reduced 5))"}
+   {:var "unreduced", :form "(unreduced 5)"}
+   {:var "unreduced", :form "(unreduced nil)"}
+   {:var "unreduced", :form "(reduced? (unreduced (reduced (reduced 4))))"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

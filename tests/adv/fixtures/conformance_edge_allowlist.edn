@@ -1,3 +1,18 @@
 ;; Intentional divergences only; open bugs use :pending-bug in the forms file.
 {"clojure.core/rationalize:12"
- "mino ADR 50: subnormal doubles print the true shortest round-trip form (5.0E-324, not the legacy 4.9E-324), so rationalize of the printed decimal yields a different exact ratio"}
+ "mino ADR 50: subnormal doubles print the true shortest round-trip form (5.0E-324, not the legacy 4.9E-324), so rationalize of the printed decimal yields a different exact ratio"
+
+ "clojure.core/char:0"
+ "mino ADR 68: unnamed characters print as \\uXXXX escapes, not raw control bytes; the printed form reads back to the same character in canon"
+
+ "clojure.core/char:1"
+ "mino ADR 68: unnamed characters print as \\uXXXX escapes, not raw control bytes; the printed form reads back to the same character in canon"
+
+ "clojure.core/counted?:22"
+ "mino ADR 69: counted? reports mino's own structures; (range 5) is a lazy sequence here, so its count is not constant-time and counted? honestly answers false"
+
+ "clojure.core/realized?:0"
+ "mino ADR 69: realized? reports mino's own lazy cells; (range) has realized nothing until forced, where canon's iterate cell holds its seed pre-computed"
+
+ "clojure.core/biginteger"
+ "census :one-integer-tier (no boxed integer sizes; int64 and bignum tiers only): biginteger returns the single bignum tier type, which prints with the N suffix where canon's host BigInteger prints bare digits. Value-level teeth for this path ride the bigint tuples, which share the conversion code"}

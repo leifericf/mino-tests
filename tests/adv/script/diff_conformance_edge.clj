@@ -134,6 +134,13 @@
       reason
       {:status :allowlisted :reason reason}
 
+      ;; bb captured a value where JVM Clojure threw for the same
+      ;; form: the two ground truths disagree and the reference wins.
+      ;; A mino throw agrees with the reference, so the tuple passes;
+      ;; it is counted separately so bb quirks stay visible.
+      (and (not (zero? exit)) (= :jvm-fail (:status jvm-rec)))
+      {:status :jvm-agree-throw}
+
       (not (zero? exit))
       {:status :mino-fail :exit exit :err err :expected bb-exp
        :jvm-expected jvm-exp :tuple tuple}
@@ -207,7 +214,7 @@
       _ (println "[diff-conformance-edge] corpus:" n
                  "tuples, running all (curated corpus, no sampling)")
       results (atom {:pass 0 :fail 0 :mino-fail 0 :allowlisted 0 :pending 0
-                     :failures []})]
+                     :jvm-agree-throw 0 :failures []})]
   (doseq [t all-ok]
     (let [k (key-of t)
           r (compare-one allow jvm-fx k t)]
@@ -215,6 +222,7 @@
         :pass        (swap! results update :pass inc)
         :allowlisted (swap! results update :allowlisted inc)
         :pending     (swap! results update :pending inc)
+        :jvm-agree-throw (swap! results update :jvm-agree-throw inc)
         :fail        (do (swap! results #(-> %
                                               (update :fail inc)
                                               (update :failures conj
@@ -249,6 +257,7 @@
                   :mino-fail (:mino-fail r)
                   :allowlisted (:allowlisted r)
                   :pending (:pending r)
+                  :jvm-agree-throw (:jvm-agree-throw r)
                   :seed effective-seed
                   :elapsed (- (now-ms) start))
     (when (pos? (:pending r))

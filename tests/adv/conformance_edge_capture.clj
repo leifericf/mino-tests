@@ -91,14 +91,30 @@
       (= r :timeout)       {:status :bb-timeout}
       (contains? r :throw) {:status :bb-fail
                             :err (some-> (.getMessage ^Throwable (:throw r))
-                                         str/split-lines first)}
+                                         str/split-lines first
+                                         ;; informational only; a raw NUL
+                                         ;; would break the mino-side read
+                                         (str/replace (str (char 0)) ""))}
       :else                {:status :ok :bb-out (:value r)})))
+
+(defn- representable?
+  "The tuple fixture is read by the mino-side differ, whose reader
+   takes NUL-terminated source; ground truth containing a raw NUL
+   (e.g. pr-str of (char 0)) cannot round-trip through it. Such cells
+   are recorded without :expected, like reference throws, so the
+   differ filters them."
+  [gt]
+  (not (and (= :ok (:status gt))
+            (some #(= (char 0) %) (:bb-out gt)))))
 
 (let [in (edn/read-string (slurp in-path))
       expanded (vec (mapcat expand-entry (:forms in)))
       _ (println "Capturing bb ground truth for" (count expanded) "forms...")
       tuples (mapv (fn [{:keys [var form pending-bug]}]
-                     (let [gt (eval-one form)]
+                     (let [gt0 (eval-one form)
+                           gt (if (representable? gt0)
+                                gt0
+                                {:status :non-representable})]
                        (cond-> {:preamble-source ""
                                 :form-source form
                                 :expected (:bb-out gt)

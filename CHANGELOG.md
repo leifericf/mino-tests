@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — mutation-testing lane; zip/gzip binary-level E2E; JVM-Clojure ground truth; ClojureDocs allowlist burn-down
+## Unreleased — mutation-testing lane; zip/gzip binary-level E2E; JVM-Clojure ground truth; ClojureDocs allowlist burn-down; conformance-edge corpus expansion
 
 New Mull-based mutation-testing lane over the four must-never-fail
 code areas of the pinned mino submodule: `src/read` (the untrusted-
@@ -103,6 +103,39 @@ gc-fuzz maskings it depended on are lifted.
 Probe verdict after the audit and the mino conformance fixes:
 **1195 pass / 0 fail / 0 mino-error / 114 allowlisted over the
 1309-example corpus**, up from 1173 pass.
+
+The conformance-edge corpus grew from 189 to 3432 runnable tuples in
+one expansion cycle. A mechanical palette sweep applied 165
+previously-uncovered core vars across the fixed edge-value palette
+(every var that is pure, unary-callable, and prints
+deterministically), and six hand-reasoned judgment batches deepened
+the transducer protocol, laziness observability, the printer family,
+the regex engine, sorted collections and comparators, and the
+numeric tower. The sweep and batches surfaced eighteen real mino
+bugs across two fix crops (keyword coercion, signed-zero abs,
+float32 sign predicates, decimal scientific layout and negative
+scale end to end, bigint truncation, rationalize exactness, one-arity
+sum/product nil, regex alternation preference, escaped dashes in
+character classes, multi-byte quantifiers, re-seq's empty result,
+vector compare ordering, and the empty shapes of three-arg subseq),
+all fixed upstream with regression tests; three divergences were
+designated intentional under new decision records (mino ADR 68
+character escapes, ADR 69 counted?/realized? honesty, ADR 70
+unchunked realization) and allowlisted with citations.
+
+The harness got two teeth-preserving upgrades. Ground truth whose
+printed form carries a raw NUL byte is recorded as
+non-representable and filtered (the mino-side differ cannot read
+embedded NUL until mino grows a length-aware reader entry; the gap
+is tracked in mino's bug ledger). And when babashka captures a value
+where JVM Clojure throws for the same form, the reference wins: a
+mino throw now passes as `jvm-agree-throw`, counted separately in
+the summary so bb quirks stay visible (26 in the current corpus).
+The teeth self-test covers both behaviors.
+
+Probe verdict at cycle close: **3432 tested / 3389 pass / 0 fail /
+0 mino-error / 17 allowlisted / 0 pending / 26 jvm-agree-throw**,
+with the ClojureDocs probe unchanged-green at 1195/0/0/114.
 
 ## v0.10.4 — Drop partition-spiral allowlist after apply-lazy fix
 

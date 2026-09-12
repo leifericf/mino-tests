@@ -194,4 +194,184 @@
    {:var "re-matches", :form "(re-matches #\"[A-Z0-9]\" \"-\")"}
    {:var "re-matches", :form "(re-matches #\"[-A-Za-z0-9_]*\" \"a-b\")"}
    {:var "re-matches", :form "(re-matches #\"[A-Za-z0-9_-]*\" \"aB9-_\")"}
+   ;; Palette sweep (corpus-expansion cycle): mechanical breadth
+   ;; over every palette-suitable uncovered core var.
+   {:var "*", :apply-palette 1}
+   {:var "*'", :apply-palette 1}
+   {:var "+", :apply-palette 1}
+   {:var "+'", :apply-palette 1}
+   {:var "-", :apply-palette 1}
+   {:var "-'", :apply-palette 1}
+   {:var "/", :apply-palette 1}
+   {:var "<", :apply-palette 1}
+   {:var "<=", :apply-palette 1}
+   {:var "=", :apply-palette 1}
+   {:var "==", :apply-palette 1}
+   {:var ">", :apply-palette 1}
+   {:var ">=", :apply-palette 1}
+   {:var "NaN?", :apply-palette 1}
+   {:var "abs", :apply-palette 1}
+   {:var "bigdec", :apply-palette 1}
+   {:var "bigint", :apply-palette 1}
+   {:var "biginteger", :apply-palette 1}
+   {:var "bit-not", :apply-palette 1}
+   {:var "boolean", :apply-palette 1}
+   {:var "boolean?", :apply-palette 1}
+   {:var "butlast", :apply-palette 1}
+   {:var "byte", :apply-palette 1}
+   {:var "bytes?", :apply-palette 1}
+   {:var "char", :apply-palette 1}
+   {:var "char?", :apply-palette 1}
+   {:var "char-escape-string", :apply-palette 1}
+   {:var "char-name-string", :apply-palette 1}
+   {:var "coll?", :apply-palette 1}
+   {:var "concat", :apply-palette 1}
+   {:var "conj", :apply-palette 1}
+   {:var "count", :apply-palette 1}
+   {:var "counted?", :apply-palette 1}
+   {:var "dec", :apply-palette 1}
+   {:var "dec'", :apply-palette 1}
+   {:var "decimal?", :apply-palette 1}
+   {:var "delay?", :apply-palette 1}
+   {:var "denominator", :apply-palette 1}
+   {:var "disj", :apply-palette 1}
+   {:var "dissoc", :apply-palette 1}
+   {:var "distinct", :apply-palette 1}
+   {:var "distinct?", :apply-palette 1}
+   {:var "doall", :apply-palette 1}
+   {:var "dorun", :apply-palette 1}
+   {:var "double", :apply-palette 1}
+   {:var "double?", :apply-palette 1}
+   {:var "empty", :apply-palette 1}
+   {:var "empty?", :apply-palette 1}
+   {:var "eval", :apply-palette 1}
+   {:var "even?", :apply-palette 1}
+   {:var "false?", :apply-palette 1}
+   {:var "ffirst", :apply-palette 1}
+   {:var "find-ns", :apply-palette 1}
+   {:var "first", :apply-palette 1}
+   {:var "flatten", :apply-palette 1}
+   {:var "float", :apply-palette 1}
+   {:var "float?", :apply-palette 1}
+   {:var "fnext", :apply-palette 1}
+   {:var "force", :apply-palette 1}
+   {:var "frequencies", :apply-palette 1}
+   {:var "hash-set", :apply-palette 1}
+   {:var "ident?", :apply-palette 1}
+   {:var "identity", :apply-palette 1}
+   {:var "ifn?", :apply-palette 1}
+   {:var "inc", :apply-palette 1}
+   {:var "inc'", :apply-palette 1}
+   {:var "indexed?", :apply-palette 1}
+   {:var "infinite?", :apply-palette 1}
+   {:var "inst?", :apply-palette 1}
+   {:var "int", :apply-palette 1}
+   {:var "int?", :apply-palette 1}
+   {:var "integer?", :apply-palette 1}
+   {:var "interleave", :apply-palette 1}
+   {:var "into", :apply-palette 1}
+   {:var "keys", :apply-palette 1}
+   {:var "keyword", :apply-palette 1}
+   {:var "keyword?", :apply-palette 1}
+   {:var "last", :apply-palette 1}
+   {:var "list", :apply-palette 1}
+   {:var "list*", :apply-palette 1}
+   {:var "list?", :apply-palette 1}
+   {:var "load-string", :apply-palette 1}
+   {:var "long", :apply-palette 1}
+   {:var "macroexpand", :apply-palette 1}
+   {:var "macroexpand-1", :apply-palette 1}
+   {:var "map?", :apply-palette 1}
+   {:var "map-entry?", :apply-palette 1}
+   {:var "merge", :apply-palette 1}
+   {:var "meta", :apply-palette 1}
+   {:var "name", :apply-palette 1}
+   {:var "namespace", :apply-palette 1}
+   {:var "nat-int?", :apply-palette 1}
+   {:var "neg-int?", :apply-palette 1}
+   {:var "neg?", :apply-palette 1}
+   {:var "next", :apply-palette 1}
+   {:var "nfirst", :apply-palette 1}
+   {:var "nil?", :apply-palette 1}
+   {:var "nnext", :apply-palette 1}
+   {:var "not", :apply-palette 1}
+   {:var "not-empty", :apply-palette 1}
+   {:var "not=", :apply-palette 1}
+   {:var "num", :apply-palette 1}
+   {:var "number?", :apply-palette 1}
+   {:var "numerator", :apply-palette 1}
+   {:var "odd?", :apply-palette 1}
+   {:var "parse-boolean", :apply-palette 1}
+   {:var "parse-double", :apply-palette 1}
+   {:var "parse-long", :apply-palette 1}
+   {:var "parse-uuid", :apply-palette 1}
+   {:var "peek", :apply-palette 1}
+   {:var "pop", :apply-palette 1}
+   {:var "pos-int?", :apply-palette 1}
+   {:var "pos?", :apply-palette 1}
+   {:var "pr-str", :apply-palette 1}
+   {:var "print-str", :apply-palette 1}
+   {:var "println-str", :apply-palette 1}
+   {:var "prn-str", :apply-palette 1}
+   {:var "qualified-ident?", :apply-palette 1}
+   {:var "qualified-keyword?", :apply-palette 1}
+   {:var "qualified-symbol?", :apply-palette 1}
+   {:var "ratio?", :apply-palette 1}
+   {:var "rational?", :apply-palette 1}
+   {:var "re-pattern", :apply-palette 1}
+   {:var "read-string", :apply-palette 1}
+   {:var "reader-conditional?", :apply-palette 1}
+   {:var "realized?", :apply-palette 1}
+   {:var "record?", :apply-palette 1}
+   {:var "reduced?", :apply-palette 1}
+   {:var "rest", :apply-palette 1}
+   {:var "reverse", :apply-palette 1}
+   {:var "reversible?", :apply-palette 1}
+   {:var "rseq", :apply-palette 1}
+   {:var "second", :apply-palette 1}
+   {:var "seq", :apply-palette 1}
+   {:var "seq?", :apply-palette 1}
+   {:var "seqable?", :apply-palette 1}
+   {:var "sequence", :apply-palette 1}
+   {:var "sequential?", :apply-palette 1}
+   ;; set is not palette-swept: cells whose result is a multi-element
+   ;; set would pin unspecified iteration order (host-relative print).
+   ;; These forms observe set semantics order-independently.
+   {:var "set", :form "(set nil)"}
+   {:var "set", :form "(set [])"}
+   {:var "set", :form "(set \"\")"}
+   {:var "set", :form "(sort (set [3 1 2 3]))"}
+   {:var "set", :form "(sort (set \"abca\"))"}
+   {:var "set", :form "(sort (set #{1 2}))"}
+   {:var "set", :form "(sort (set (range 5)))"}
+   {:var "set", :form "(count (set [1 1 2 2]))"}
+   {:var "set", :form "(contains? (set [1 2 3]) 2)"}
+   {:var "set", :form "(set {:a 1})"}
+   {:var "set", :form "(= #{1 2 3} (set [1 2 3]))"}
+   {:var "set?", :apply-palette 1}
+   {:var "short", :apply-palette 1}
+   {:var "simple-ident?", :apply-palette 1}
+   {:var "simple-keyword?", :apply-palette 1}
+   {:var "simple-symbol?", :apply-palette 1}
+   {:var "some?", :apply-palette 1}
+   {:var "sort", :apply-palette 1}
+   {:var "sorted-set", :apply-palette 1}
+   {:var "sorted?", :apply-palette 1}
+   {:var "special-symbol?", :apply-palette 1}
+   {:var "str", :apply-palette 1}
+   {:var "string?", :apply-palette 1}
+   {:var "symbol", :apply-palette 1}
+   {:var "symbol?", :apply-palette 1}
+   {:var "tagged-literal?", :apply-palette 1}
+   {:var "true?", :apply-palette 1}
+   {:var "unreduced", :apply-palette 1}
+   {:var "uri?", :apply-palette 1}
+   {:var "uuid?", :apply-palette 1}
+   {:var "vals", :apply-palette 1}
+   {:var "var?", :apply-palette 1}
+   {:var "vec", :apply-palette 1}
+   {:var "vector", :apply-palette 1}
+   {:var "vector?", :apply-palette 1}
+   {:var "volatile?", :apply-palette 1}
+   {:var "zero?", :apply-palette 1}
  ]}

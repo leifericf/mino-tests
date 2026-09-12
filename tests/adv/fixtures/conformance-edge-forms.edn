@@ -437,6 +437,71 @@
    {:var "re-groups", :form "(let [m (re-matcher #\"ab\" \"xaby\")] (re-find m) (re-groups m))"}
    {:var "re-groups", :form "(let [m (re-matcher #\"(\\w)(\\d)\" \"a1 b2\")] [(re-find m) (re-groups m) (re-find m) (re-groups m)])"}
    {:var "re-groups", :form "(let [m (re-matcher #\"(a+)\" \"xaaay\")] (re-find m) (first (re-groups m)))"}
+   {:var "sorted-map", :form "(sorted-map 3 :c 1 :a 2 :b)"}
+   {:var "sorted-map", :form "(sorted-map 1 :a 1 :b)"}
+   {:var "sorted-map", :form "(assoc (sorted-map 2 :b) 1 :a 3 :c)"}
+   {:var "sorted-map", :form "(dissoc (sorted-map 1 :a 2 :b 3 :c) 2)"}
+   {:var "sorted-map", :form "(first (sorted-map 3 :c 1 :a))"}
+   {:var "sorted-map", :form "(keys (sorted-map 3 :c 1 :a 2 :b))"}
+   {:var "sorted-map", :form "(seq (sorted-map 2 :b 1 :a))"}
+   {:var "sorted-map", :form "(into (sorted-map) {:b 2 :a 1})"}
+   {:var "sorted-map-by", :form "(sorted-map-by > 1 :a 2 :b 3 :c)"}
+   {:var "sorted-map-by", :form "(sorted-map-by (fn [a b] (compare (str a) (str b))) 10 :ten 2 :two 1 :one)"}
+   {:var "sorted-map-by", :form "(sorted-map-by (fn [a b] 0) 1 :a 2 :b)"}
+   {:var "sorted-map-by", :form "(count (sorted-map-by (fn [a b] 0) 1 :a 2 :b 3 :c))"}
+   {:var "sorted-map-by", :form "(get (sorted-map-by (fn [a b] 0) 1 :a) 99)"}
+   {:var "sorted-map-by", :form "(keys (sorted-map-by compare 1 {:x 1} 0 []))"}
+   {:var "sorted-set", :form "(sorted-set 3 1 2)"}
+   {:var "sorted-set", :form "(sorted-set 3 1 2 1)"}
+   {:var "sorted-set", :form "(conj (sorted-set 2 4) 3 1)"}
+   {:var "sorted-set", :form "(first (sorted-set 3 1 2))"}
+   {:var "sorted-set", :form "(last (sorted-set 3 1 2))"}
+   {:var "sorted-set", :form "(get (sorted-set 1 2 3) 2)"}
+   {:var "sorted-set", :form "(sorted-set \"pear\" \"apple\" \"fig\")"}
+   {:var "sorted-set", :form "(seq (sorted-set))"}
+   {:var "sorted-set-by", :form "(sorted-set-by > 1 3 2)"}
+   {:var "sorted-set-by", :form "(sorted-set-by (fn [a b] 0) 1 2 3)"}
+   {:var "sorted-set-by", :form "(count (sorted-set-by (fn [a b] (compare (mod a 3) (mod b 3))) 1 4 7))"}
+   {:var "sorted-set-by", :form "(sorted-set-by (fn [a b] (compare (str a) (str b))) 10 2 1)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3 4 5) > 2)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3 4 5) >= 2)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3 4 5) >= 2 < 4)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3 4 5) > 1 <= 4)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3) > 5)"}
+   {:var "subseq", :form "(subseq (sorted-set 1 2 3) >= 1 < 1)"}
+   {:var "subseq", :form "(subseq (sorted-map 1 :a 2 :b 3 :c) >= 2)"}
+   {:var "subseq", :form "(subseq (sorted-map-by > 1 :a 2 :b 3 :c) > 2)"}
+   {:var "subseq", :form "(subseq (sorted-set-by > 1 2 3 4 5) < 3)"}
+   {:var "rsubseq", :form "(rsubseq (sorted-set 1 2 3 4 5) < 4)"}
+   {:var "rsubseq", :form "(rsubseq (sorted-set 1 2 3 4 5) >= 2 <= 4)"}
+   {:var "rsubseq", :form "(rsubseq (sorted-map 1 :a 2 :b 3 :c) < 3)"}
+   {:var "rsubseq", :form "(rsubseq (sorted-set 1 2 3) > 5)"}
+   {:var "sorted?", :form "(sorted? (sorted-map 1 :a))"}
+   {:var "sorted?", :form "(sorted? (sorted-set 1))"}
+   {:var "sorted?", :form "(sorted? (sorted-map-by > 1 :a))"}
+   {:var "sorted?", :form "(sorted? {:a 1})"}
+   {:var "sorted?", :form "(sorted? nil)"}
+   {:var "sorted?", :form "(sorted? (subseq (sorted-set 1 2) > 0))"}
+   {:var "compare", :form "(compare 1 2)"}
+   {:var "compare", :form "(compare 1 1.0)"}
+   {:var "compare", :form "(compare \"apple\" \"banana\")"}
+   {:var "compare", :form "(compare \"ab\" \"abc\")"}
+   {:var "compare", :form "(compare \"b\" \"aa\")"}
+   {:var "compare", :form "(compare :a :b)"}
+   {:var "compare", :form "(compare :x :a/x)"}
+   {:var "compare", :form "(compare 'abc 'abd)"}
+   {:var "compare", :form "(compare [1 2] [1 2 3])"}
+   {:var "compare", :form "(compare [2] [1 99])"}
+   {:var "compare", :form "(compare [1 2 3] [1 2 0])"}
+   {:var "compare", :form "(compare nil 1)"}
+   {:var "compare", :form "(compare 1 nil)"}
+   {:var "compare", :form "(compare false true)"}
+   {:var "compare", :form "(compare \\a \\b)"}
+   {:var "compare", :form "(compare 10N 3)"}
+   {:var "compare", :form "(compare 1/2 2/3)"}
+   {:var "comparator", :form "(mapv (comparator <) [1 2 1] [2 1 1])"}
+   {:var "comparator", :form "(vec (sort (comparator >) [1 3 2]))"}
+   {:var "comparator", :form "(vec (sort-by count (comparator >) [[1] [1 2 3] [1 2]]))"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

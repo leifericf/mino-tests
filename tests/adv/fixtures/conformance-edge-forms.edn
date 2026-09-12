@@ -377,6 +377,66 @@
    {:var "with-out-str", :form "(with-out-str (print \"a\") (print \"b\"))"}
    {:var "with-out-str", :form "(with-out-str (print \"a\" (with-out-str (print \"b\"))))"}
    {:var "with-out-str", :form "(let [s (with-out-str (print \"out\") :ret)] s)"}
+   {:var "re-find", :form "(re-find #\"\\d+\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"b\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"(a)(b)\" \"xab\")"}
+   {:var "re-find", :form "(re-find #\"(a)|(b)\" \"b\")"}
+   {:var "re-find", :form "(re-find #\"((a)(b))c\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"a(b)?c\" \"ac\")"}
+   {:var "re-find", :form "(re-find #\"^abc\" \"xabc\")"}
+   {:var "re-find", :form "(re-find #\"c$\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"(?m)^b$\" \"a\\nb\\nc\")"}
+   {:var "re-find", :form "(re-find #\"\\bcat\\b\" \"the cat sat\")"}
+   {:var "re-find", :form "(re-find #\"\\bcat\\b\" \"concatenate\")"}
+   {:var "re-find", :form "(re-find #\"a|ab\" \"ab\")"}
+   {:var "re-find", :form "(re-find #\"a.*b\" \"aXbYb\")"}
+   {:var "re-find", :form "(re-find #\"a.*?b\" \"aXbYb\")"}
+   {:var "re-find", :form "(re-find #\"(a+)+b\" \"aaab\")"}
+   {:var "re-find", :form "(re-find #\"\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"x*\" \"abc\")"}
+   {:var "re-find", :form "(re-find #\"(?i)abc\" \"xABCy\")"}
+   {:var "re-find", :form "(re-find #\"(?s)a.b\" \"a\\nb\")"}
+   {:var "re-find", :form "(re-find #\"a.b\" \"a\\nb\")"}
+   {:var "re-find", :form "(re-find #\"[^a]+\" \"aabba\")"}
+   {:var "re-find", :form "(re-find #\"[a-c]+\" \"zabcz\")"}
+   {:var "re-find", :form "(re-find #\"[a\\-c]+\" \"b-c\")"}
+   {:var "re-find", :form "(re-find #\"[a-cx-z]+\" \"byz\")"}
+   {:var "re-find", :form "(re-find #\"\\d+\" \"ab123cd\")"}
+   {:var "re-find", :form "(re-find #\"\\w+\" \"!!ab_9!!\")"}
+   {:var "re-find", :form "(re-find #\"\\s+\" \"a \\tb\")"}
+   {:var "re-find", :form "(re-find #\"\\S+\" \"  abc  \")"}
+   {:var "re-find", :form "(re-find #\"\\D+\" \"12ab34\")"}
+   {:var "re-find", :form "(re-find #\"a{2}\" \"aaa\")"}
+   {:var "re-find", :form "(re-find #\"a{2,}\" \"aaaa\")"}
+   {:var "re-find", :form "(re-find #\"a{2,3}\" \"aaaaa\")"}
+   {:var "re-find", :form "(re-find #\"(ab)\\1\" \"abab\")"}
+   {:var "re-find", :form "(re-find #\"é+\" \"caféé\")"}
+   {:var "re-find", :form "(re-find #\"(?i)Å\" \"å\")"}
+   {:var "re-seq", :form "(re-seq #\"\\d+\" \"a1b22c333\")"}
+   {:var "re-seq", :form "(re-seq #\"aa\" \"aaaa\")"}
+   {:var "re-seq", :form "(re-seq #\"a*\" \"bab\")"}
+   {:var "re-seq", :form "(re-seq #\"\" \"ab\")"}
+   {:var "re-seq", :form "(re-seq #\"(\\d)([a-z])\" \"1a2b\")"}
+   {:var "re-seq", :form "(re-seq #\"z\" \"abc\")"}
+   {:var "re-seq", :form "(re-seq #\".\" \"ab\")"}
+   {:var "re-seq", :form "(re-seq #\"(?i)a\" \"AaA\")"}
+   {:var "re-seq", :form "(mapv second (re-seq #\"(\\d+)\" \"a1b22c333\"))"}
+   {:var "re-seq", :form "(take 2 (re-seq #\"\\w+\" \"one two three\"))"}
+   {:var "re-seq", :form "(count (re-seq #\"o\" \"foo boo\"))"}
+   {:var "re-pattern", :form "(re-find (re-pattern \"a\\\\.b\") \"xa.by\")"}
+   {:var "re-pattern", :form "(str (re-pattern \"x+\"))"}
+   {:var "re-pattern", :form "(pr-str (re-pattern \"a.b\"))"}
+   {:var "re-pattern", :form "(str (re-pattern #\"a+\"))"}
+   {:var "re-pattern", :form "(= \"a.b\" (str #\"a.b\"))"}
+   {:var "re-pattern", :form "(re-find (re-pattern \"\\\\d+\") \"ab12\")"}
+   {:var "re-pattern", :form "(pr-str #\"\\d+\")"}
+   {:var "re-matcher", :form "(let [m (re-matcher #\"a.\" \"axay\")] [(re-find m) (re-find m) (re-find m)])"}
+   {:var "re-matcher", :form "(let [m (re-matcher #\"\\d+\" \"a1b22\")] [(re-find m) (re-find m)])"}
+   {:var "re-matcher", :form "(let [m (re-matcher #\"(x)?y\" \"y\")] (re-find m))"}
+   {:var "re-groups", :form "(let [m (re-matcher #\"(a)(b)\" \"ab\")] (re-find m) (re-groups m))"}
+   {:var "re-groups", :form "(let [m (re-matcher #\"ab\" \"xaby\")] (re-find m) (re-groups m))"}
+   {:var "re-groups", :form "(let [m (re-matcher #\"(\\w)(\\d)\" \"a1 b2\")] [(re-find m) (re-groups m) (re-find m) (re-groups m)])"}
+   {:var "re-groups", :form "(let [m (re-matcher #\"(a+)\" \"xaaay\")] (re-find m) (first (re-groups m)))"}
    ;; Palette sweep (corpus-expansion cycle): mechanical breadth
    ;; over every palette-suitable uncovered core var.
    {:var "*", :apply-palette 1}

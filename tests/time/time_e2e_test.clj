@@ -9,8 +9,18 @@
 ;; datetime / email.utils for random-instant parse/format/offset
 ;; agreement. Tools missing from PATH skip their lane loudly.
 
-(def ^:private date-available?
-  (try (sh "date" "-u" "+%Y") true (catch Throwable e false)))
+(def ^:private date-epoch-flag
+  "How the host `date` renders an epoch: GNU date reads it via
+  `-d @<secs>`, BSD/macOS date via `-r <secs>`. Probe once so the
+  oracle is portable across both."
+  (cond
+    (try (= "1970" (str/trim (sh! "date" "-u" "-d" "@0" "+%Y")))
+         (catch Throwable e false)) :gnu
+    (try (= "1970" (str/trim (sh! "date" "-u" "-r" "0" "+%Y")))
+         (catch Throwable e false)) :bsd
+    :else nil))
+
+(def ^:private date-available? (some? date-epoch-flag))
 
 (def ^:private python-available?
   (try (sh "python3" "-c" "import datetime") true (catch Throwable e false)))
@@ -26,7 +36,10 @@
    1787279462])        ; 2026-08-21T02:31:02Z
 
 (defn- date-out [secs fmt]
-  (str/trim (sh! "date" "-u" "-r" (str secs) fmt)))
+  (str/trim
+   (if (= date-epoch-flag :gnu)
+     (sh! "date" "-u" "-d" (str "@" secs) fmt)
+     (sh! "date" "-u" "-r" (str secs) fmt))))
 
 (deftest rfc1123-matches-host-date
   (if date-available?

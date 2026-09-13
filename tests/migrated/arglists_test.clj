@@ -163,7 +163,7 @@
   (is (= '([x y]) (:arglists (meta #'clojure.core/identical?))))
   (is (= '([] [coll] [coll x]) (:arglists (meta #'clojure.core/conj!))))
   (is (= '([f]) (:arglists (meta #'clojure.core/slurp))))
-  (is (= '([sym]) (:arglists (meta #'clojure.core/resolve))))
+  (is (= '([sym] [env sym]) (:arglists (meta #'clojure.core/resolve))))
   (is (= '([x] [x & options]) (:arglists (meta #'clojure.core/ref))))
   (is (= '([array idx]) (:arglists (meta #'clojure.core/aget))))
   (is (= '([array idx val]) (:arglists (meta #'clojure.core/aset))))
